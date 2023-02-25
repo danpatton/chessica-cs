@@ -203,6 +203,19 @@ public class BoardViewModel : INotifyPropertyChanged
         }, TaskScheduler.FromCurrentSynchronizationContext());
     }
 
+    public bool CanUndo => IsUsersMove && _pgnMoves.Count >= 2;
+
+    public void UndoLastFullMove()
+    {
+        if (!IsUsersMove) return;
+        if (_pgnMoves.Count < 2) return;
+        _pgnMoves.RemoveRange(_pgnMoves.Count - 2, 2);
+        _boardState.TryPop();
+        _boardState.TryPop();
+        UpdateAll();
+        OnPropertyChanged(nameof(PgnMoveHistory));
+    }
+
     public IEnumerable<Coord> GetLegalTargetCoords(PieceViewModel piece)
     {
         return piece.Side == _boardState.SideToMove

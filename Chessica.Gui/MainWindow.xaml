@@ -6,15 +6,21 @@
         xmlns:v="clr-namespace:Chessica.Gui.View"
         mc:Ignorable="d"
         Title="Chessica" Height="850" Width="1050" ResizeMode="NoResize" Icon="{StaticResource BlackQueenDrawingImage}">
+    <Window.CommandBindings>
+        <CommandBinding Command="v:CustomCommands.Exit" CanExecute="ExitCommand_CanExecute" Executed="ExitCommand_Executed" />
+        <CommandBinding Command="v:CustomCommands.Undo" CanExecute="UndoCommand_CanExecute" Executed="UndoCommand_Executed" />
+    </Window.CommandBindings>
     <DockPanel>
         <Menu DockPanel.Dock="Top" Height="25">
             <MenuItem Header="_File">
                 <MenuItem Header="New Game (_White)" Click="MenuNewGame_White_OnClick" />
                 <MenuItem Header="New Game (_Black)" Click="MenuNewGame_Black_OnClick" />
                 <Separator />
-                <MenuItem Header="E_xit" Click="MenuExit_OnClick" />
+                <MenuItem Header="E_xit" Command="v:CustomCommands.Exit" />
             </MenuItem>
             <MenuItem Header="_Edit">
+                <MenuItem Header="Undo" Command="v:CustomCommands.Undo" />
+                <Separator />
                 <MenuItem Header="Copy _PGN to Clipboard" Click="MenuCopyPgn_OnClick" />
                 <MenuItem Header="Copy _FEN to Clipboard" Click="MenuCopyFen_OnClick" />
             </MenuItem>
