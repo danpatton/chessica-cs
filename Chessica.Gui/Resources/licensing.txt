@@ -1,0 +1,6 @@
+﻿All files in this directory are made freely available under the GNU Free Documentation License
+https://en.wikipedia.org/wiki/GNU_Free_Documentation_License
+
+Glyphs originally sourced from https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces
+Transformed from SVG to XAML using https://github.com/BerndK/SvgToXaml
+Transformed from SVG to ICO using https://cloudconvert.com/svg-to-ico
