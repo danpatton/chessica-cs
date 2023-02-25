@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:v="clr-namespace:Chessica.Gui.View"
         mc:Ignorable="d"
-        Title="Chessica" Height="850" Width="800">
+        Title="Chessica" Height="850" Width="1050" ResizeMode="NoResize" Icon="{StaticResource BlackQueenDrawingImage}">
     <DockPanel>
         <Menu DockPanel.Dock="Top" Height="25">
             <MenuItem Header="_File">
@@ -14,12 +14,20 @@
                 <Separator />
                 <MenuItem Header="E_xit" Click="MenuExit_OnClick" />
             </MenuItem>
+            <MenuItem Header="_Edit">
+                <MenuItem Header="Copy _PGN to Clipboard" Click="MenuCopyPgn_OnClick" />
+                <MenuItem Header="Copy _FEN to Clipboard" Click="MenuCopyFen_OnClick" />
+            </MenuItem>
         </Menu>
         <StatusBar DockPanel.Dock="Bottom" Height="25">
             <StatusBarItem>
                 <TextBlock Name="LabelStatusBarText" Text="{Binding StatusMessage}" />
             </StatusBarItem>
         </StatusBar>
+        <StackPanel DockPanel.Dock="Right" Orientation="Vertical" Width="250">
+            <Label Content="Move History" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" />
+            <TextBlock Text="{Binding PgnMoveHistory}" />
+        </StackPanel>
         <v:BoardView x:Name="BoardView" />
     </DockPanel>
 </Window>

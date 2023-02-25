@@ -87,8 +87,13 @@ public record PgnGame(IImmutableDictionary<string, string> Tags, IImmutableList<
     public void WriteToFile(string filename)
     {
         using var stream = File.OpenWrite(filename);
+        WriteToStream(stream);
+    }
+
+    public void WriteToStream(Stream stream)
+    {
         using var writer = new StreamWriter(stream);
-        for (var i = 0; i <= Moves.Count / 2; ++i)
+        for (var i = 0; i < (1 + Moves.Count) / 2; ++i)
         {
             var whiteMove = Moves[2*i];
             writer.Write($"{i+1}. {whiteMove.Spec} ");
@@ -98,14 +103,7 @@ public record PgnGame(IImmutableDictionary<string, string> Tags, IImmutableList<
                 writer.Write(blackMove.Spec);
             }
 
-            if (i % 8 == 1)
-            {
-                writer.WriteLine();
-            }
-            else
-            {
-                writer.Write(" ");
-            }
+            writer.WriteLine();
         }
 
         switch (Result)

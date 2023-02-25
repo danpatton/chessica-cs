@@ -1,12 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using Chessica.Core;
 using Chessica.Gui.View;
+using Chessica.Pgn;
 using Chessica.Uci;
 
 namespace Chessica.Gui.ViewModel;
@@ -14,8 +18,12 @@ namespace Chessica.Gui.ViewModel;
 public class BoardViewModel : INotifyPropertyChanged
 {
     private BoardState _boardState;
+    private readonly List<PgnMove> _pgnMoves;
+    private PgnGameResult _pgnResult;
 
     public Side UserSide { get; private set; } = Side.White;
+
+    public Side EngineSide => UserSide == Side.White ? Side.Black : Side.White;
 
     private readonly List<Move> _legalMoves = new();
 
@@ -38,6 +46,8 @@ public class BoardViewModel : INotifyPropertyChanged
     public BoardViewModel()
     {
         _boardState = BoardState.StartingPosition;
+        _pgnMoves = new List<PgnMove>();
+        _pgnResult = PgnGameResult.Other;
         Squares = new ObservableCollection<SquareViewModel>();
         Pieces = new ObservableCollection<PieceViewModel>();
         UpdateSquares();
@@ -47,6 +57,8 @@ public class BoardViewModel : INotifyPropertyChanged
     {
         UserSide = userSide;
         _boardState = BoardState.StartingPosition;
+        _pgnMoves.Clear();
+        _pgnResult = PgnGameResult.Other;
         StatusMessage = "";
         UpdateAll();
         if (userSide == Side.Black)
@@ -128,10 +140,17 @@ public class BoardViewModel : INotifyPropertyChanged
     public void MovePiece(PieceViewModel piece, Coord targetCoord)
     {
         if (!TryResolveMove(piece, targetCoord, out var move)) return;
-        _boardState.Push(move!);
+        var moveSpec = move!.ToPgnSpec(_boardState);
+        _boardState.Push(move);
         _selectedPiece = null;
-        UpdateAll();
         var (inCheck, numLegalMoves) = _boardState.GetGameState();
+        if (inCheck)
+        {
+            moveSpec += numLegalMoves == 0 ? "#" : "+";
+        }
+
+        _pgnMoves.Add(new PgnMove(UserSide, moveSpec));
+        UpdateAll();
         if (numLegalMoves == 0)
         {
             var messageBoxText = inCheck
@@ -139,9 +158,14 @@ public class BoardViewModel : INotifyPropertyChanged
                 : "Looks a bit stale to me, mate!";
             var caption = inCheck ? "Checkmate" : "Stalemate";
             MessageBox.Show(messageBoxText, caption);
+            _pgnResult = inCheck
+                ? UserSide == Side.White ? PgnGameResult.WhiteWin : PgnGameResult.BlackWin
+                : PgnGameResult.Draw;
+            OnPropertyChanged(nameof(PgnMoveHistory));
         }
         else
         {
+            OnPropertyChanged(nameof(PgnMoveHistory));
             MakeEngineMove();
         }
     }
@@ -152,16 +176,17 @@ public class BoardViewModel : INotifyPropertyChanged
         Task.Run(() => new MiniMaxMoveGenerator(4).GetBestMove(_boardState)).ContinueWith(t =>
         {
             var engineMove = t.Result;
-            var moveNumber = _boardState.FullMoveNumber;
-            var spacer = UserSide == Side.White ? " ..." : " ";
-            var pgnMoveSpec = engineMove.ToPgnSpec(_boardState);
+            var moveSpec = engineMove.ToPgnSpec(_boardState);
             _boardState.Push(engineMove);
             UpdateAll();
             var (inCheck, numLegalMoves) = _boardState.GetGameState();
-            var checkIndicator = inCheck
-                ? numLegalMoves == 0 ? "#" : "+"
-                : string.Empty;
-            StatusMessage = $"Last engine move: {moveNumber}{spacer}{pgnMoveSpec}{checkIndicator}";
+            if (inCheck)
+            {
+                moveSpec += numLegalMoves == 0 ? "#" : "+";
+            }
+
+            _pgnMoves.Add(new PgnMove(EngineSide, moveSpec));
+            StatusMessage = $"Last engine move: {moveSpec}";
             if (numLegalMoves == 0)
             {
                 var messageBoxText = inCheck
@@ -169,7 +194,12 @@ public class BoardViewModel : INotifyPropertyChanged
                     : "Managed to snatch a draw off you!";
                 var caption = inCheck ? "Checkmate" : "Stalemate";
                 MessageBox.Show(messageBoxText, caption);
+                _pgnResult = inCheck
+                    ? EngineSide == Side.White ? PgnGameResult.WhiteWin : PgnGameResult.BlackWin
+                    : PgnGameResult.Draw;
             }
+            
+            OnPropertyChanged(nameof(PgnMoveHistory));
         }, TaskScheduler.FromCurrentSynchronizationContext());
     }
 
@@ -192,6 +222,18 @@ public class BoardViewModel : INotifyPropertyChanged
             OnPropertyChanged(nameof(StatusMessage));
         }
     }
+
+    public string PgnMoveHistory
+    {
+        get
+        {
+            using var memoryStream = new MemoryStream();
+            new PgnGame(ImmutableDictionary<string, string>.Empty, _pgnMoves.ToImmutableArray(), _pgnResult).WriteToStream(memoryStream);
+            return Encoding.UTF8.GetString(memoryStream.ToArray());
+        }
+    }
+
+    public string FenBoardState => _boardState.ToFenString();
 
     public event PropertyChangedEventHandler? PropertyChanged;
     protected virtual void OnPropertyChanged(string propertyName)

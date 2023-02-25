@@ -25,5 +25,15 @@ namespace Chessica.Gui
         {
             Application.Current.Shutdown();
         }
+
+        private void MenuCopyPgn_OnClick(object sender, RoutedEventArgs e)
+        {
+            Clipboard.SetText(BoardView.BoardViewModel.PgnMoveHistory);
+        }
+
+        private void MenuCopyFen_OnClick(object sender, RoutedEventArgs e)
+        {
+            Clipboard.SetText(BoardView.BoardViewModel.FenBoardState);
+        }
     }
 }

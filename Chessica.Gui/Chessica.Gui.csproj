@@ -9,6 +9,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Chessica.Core\Chessica.Core.csproj" />
+      <ProjectReference Include="..\Chessica.Pgn\Chessica.Pgn.csproj" />
       <ProjectReference Include="..\Chessica.Uci\Chessica.Uci.csproj" />
     </ItemGroup>
 
