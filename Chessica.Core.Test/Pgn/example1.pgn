@@ -1,0 +1,25 @@
+[Event "vs Computer"]
+[Site "Chess.com"]
+[Date "2022.11.17"]
+[Round "-"]
+[White "Emir-BOT"]
+[Black "CrackitySplatt"]
+[Result "0-1"]
+[CurrentPosition "r4rk1/ppp2pbp/3p2p1/5bP1/2P5/2P5/4B1PP/Kq4NR w - - 2 20"]
+[Timezone "UTC"]
+[ECO "E73"]
+[ECOUrl "https://www.chess.com/openings/Kings-Indian-Defense-Standard-Development"]
+[UTCDate "2022.11.17"]
+[UTCTime "07:25:37"]
+[WhiteElo "1000"]
+[BlackElo "800"]
+[TimeControl "1/0"]
+[Termination "CrackitySplatt won by checkmate"]
+[StartTime "07:25:37"]
+[EndDate "2022.11.17"]
+[EndTime "07:33:21"]
+[Link "https://www.chess.com/game/computer/24260553"]
+
+1. d4 Nf6 2. c4 g6 3. Nc3 Bg7 4. e4 d6 5. Be2 O-O 6. a4 e5 7. Bg5 Nc6 8. Qd2
+exd4 9. O-O-O dxc3 10. bxc3 Na5 11. f4 Nb3+ 12. Kb2 Nxd2 13. Rxd2 Qe8 14. Rc2
+Nxe4 15. Kb1 Nxg5 16. Ka2 Qxa4+ 17. Kb1 Bf5 18. fxg5 Qxc2+ 19. Ka1 Qb1# 0-1

@@ -1,0 +1,13 @@
+﻿TODO:
+Parsing & execution of PGN
+Generation of correct PGN
+Improve "game state" API
+Threefold repetition rule (hashing of BoardState)
+
+Test cases
+Pinned pieces: moving towards / away from king
+Escaping check by capturing en passant
+
+Minimax search:
+Alpha beta pruning?
+Parallelisation?

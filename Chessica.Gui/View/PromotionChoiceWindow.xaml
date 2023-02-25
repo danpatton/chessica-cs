@@ -1,0 +1,28 @@
+﻿<Window x:Class="Chessica.Gui.View.PromotionChoiceWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:v="clr-namespace:Chessica.Gui.View"
+        mc:Ignorable="d"
+        Title="Select Promotion Piece" Height="140" Width="525">
+    <Window.Resources>
+        <v:BindingResourceConverter x:Key="ResourceConverter"/>
+    </Window.Resources>
+    <Grid>
+        <DockPanel HorizontalAlignment="Stretch" Margin="10">
+            <Button Width="100" Margin="10" Click="Queen_OnClick" DockPanel.Dock="Left">
+                <Image Source="{Binding QueenImageResourceKey, Converter={StaticResource ResourceConverter }}" />
+            </Button>
+            <Button Width="100" Margin="10" Click="Rook_OnClick" DockPanel.Dock="Left">
+                <Image Source="{Binding RookImageResourceKey, Converter={StaticResource ResourceConverter }}" />
+            </Button>
+            <Button Width="100" Margin="10" Click="Knight_OnClick" DockPanel.Dock="Left">
+                <Image Source="{Binding KnightImageResourceKey, Converter={StaticResource ResourceConverter }}" />
+            </Button>
+            <Button Width="100" Margin="10" Click="Bishop_OnClick">
+                <Image Source="{Binding BishopImageResourceKey, Converter={StaticResource ResourceConverter }}" />
+            </Button>
+        </DockPanel>
+    </Grid>
+</Window>

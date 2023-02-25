@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net6.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+
+        <IsPackable>false</IsPackable>
+
+        <RootNamespace>Chessica.Core.Test</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.1.0" />
+        <PackageReference Include="NUnit" Version="3.13.3" />
+        <PackageReference Include="NUnit3TestAdapter" Version="4.2.1" />
+        <PackageReference Include="NUnit.Analyzers" Version="3.3.0" />
+        <PackageReference Include="coverlet.collector" Version="3.1.2" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Chessica.Core\Chessica.Core.csproj" />
+      <ProjectReference Include="..\Chessica.Pgn\Chessica.Pgn.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Remove="Pgn\example1.pgn" />
+      <EmbeddedResource Include="Pgn\example1.pgn" />
+      <None Remove="Pgn\example2.pgn" />
+      <EmbeddedResource Include="Pgn\example2.pgn" />
+      <None Remove="Pgn\example3.pgn" />
+      <EmbeddedResource Include="Pgn\example3.pgn" />
+      <None Remove="Pgn\example1.fen" />
+      <EmbeddedResource Include="Pgn\example1.fen" />
+      <None Remove="Pgn\example2.fen" />
+      <EmbeddedResource Include="Pgn\example2.fen" />
+      <None Remove="Pgn\example3.fen" />
+      <EmbeddedResource Include="Pgn\example3.fen" />
+      <None Remove="Pgn\twic1000.pgn" />
+      <EmbeddedResource Include="Pgn\twic1000.pgn" />
+      <None Remove="Pgn\twic1000.fen" />
+      <EmbeddedResource Include="Pgn\twic1000.fen" />
+      <None Remove="Pgn\twic1001.pgn" />
+      <EmbeddedResource Include="Pgn\twic1001.pgn" />
+      <None Remove="Pgn\twic1001.fen" />
+      <EmbeddedResource Include="Pgn\twic1001.fen" />
+      <None Remove="Pgn\twic1002.fen" />
+      <EmbeddedResource Include="Pgn\twic1002.fen" />
+      <None Remove="Pgn\twic1002.pgn" />
+      <EmbeddedResource Include="Pgn\twic1002.pgn" />
+    </ItemGroup>
+
+</Project>
