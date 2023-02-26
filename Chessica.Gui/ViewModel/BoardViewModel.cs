@@ -85,7 +85,12 @@ public class BoardViewModel : INotifyPropertyChanged
             for (byte rank = 0; rank < 8; ++rank)
             {
                 var coord = new Coord(file, rank);
-                var square = new SquareViewModel(coord, boardInverted, IsSelected(coord), IsHighlighted(coord));
+                var square = new SquareViewModel(
+                    coord,
+                    boardInverted,
+                    IsSelected(coord),
+                    IsPotentialMove(coord),
+                    IsPotentialCapture(coord));
                 Squares.Add(square);
             }
         }
@@ -109,10 +114,16 @@ public class BoardViewModel : INotifyPropertyChanged
         return SelectedPiece?.Coord == coord;
     }
 
-    public bool IsHighlighted(Coord coord)
+    public bool IsPotentialMove(Coord coord)
     {
         return SelectedPiece != null &&
-               _legalMoves.Any(m => m.From == SelectedPiece.Coord && m.To == coord);
+               _legalMoves.Any(m => m.From == SelectedPiece.Coord && m.To == coord && !m.IsCapture);
+    }
+
+    public bool IsPotentialCapture(Coord coord)
+    {
+        return SelectedPiece != null &&
+               _legalMoves.Any(m => m.From == SelectedPiece.Coord && m.To == coord && m.IsCapture);
     }
 
     private bool TryResolveMove(PieceViewModel piece, Coord targetCoord, out Move? move)

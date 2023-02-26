@@ -13,25 +13,45 @@
             <Grid>
                 <Rectangle
                     Fill="{Binding Fill}"
-                    Stroke="{Binding Stroke}"
                     Opacity="{Binding Opacity}"
                     AllowDrop="True"
                     MouseUp="SquaresGrid_OnMouseUp"
                     DragEnter="SquaresGrid_OnDragEnter"
                     Drop="SquaresGrid_OnDrop"
                     />
+                <Ellipse
+                    Width="40"
+                    Height="40"
+                    Fill="{Binding Foreground}"
+                    Opacity="0.15"
+                    Visibility="{Binding PotentialMoveHighlighting}"
+                    IsHitTestVisible="False"
+                    />
+                <Ellipse
+                    Width="90"
+                    Height="90"
+                    Stroke="{Binding Foreground}"
+                    Opacity="0.15"
+                    StrokeThickness="10"
+                    Visibility="{Binding PotentialCaptureHighlighting}"
+                    IsHitTestVisible="False"
+                    ></Ellipse>
                 <TextBlock HorizontalAlignment="Right"
                            VerticalAlignment="Top"
                            Margin="5"
                            FontSize="12"
                            Foreground="{Binding Foreground}"
-                           Text="{Binding RankIndicator}" />
+                           Text="{Binding RankIndicator}"
+                           IsHitTestVisible="False"
+                           />
                 <TextBlock HorizontalAlignment="Left"
                            VerticalAlignment="Bottom"
                            Margin="2"
                            FontSize="11"
                            Foreground="{Binding Foreground}"
-                           Text="{Binding FileIndicator}" />
+                           Text="{Binding FileIndicator}"
+                           IsHitTestVisible="False"
+                           />
             </Grid>
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:PieceViewModel}">

@@ -1,4 +1,5 @@
-﻿using System.Windows.Media;
+﻿using System.Windows;
+using System.Windows.Media;
 using Chessica.Core;
 
 namespace Chessica.Gui.ViewModel;
@@ -7,13 +8,15 @@ public class SquareViewModel
 {
     private readonly bool _boardInverted;
     private readonly bool _isSelected;
-    private readonly bool _isHighlighted;
+    private readonly bool _isPotentialMove;
+    private readonly bool _isPotentialCapture;
 
-    public SquareViewModel(Coord coord, bool boardInverted, bool isSelected, bool isHighlighted)
+    public SquareViewModel(Coord coord, bool boardInverted, bool isSelected, bool isPotentialMove, bool isPotentialCapture)
     {
         _boardInverted = boardInverted;
         _isSelected = isSelected;
-        _isHighlighted = isHighlighted;
+        _isPotentialMove = isPotentialMove;
+        _isPotentialCapture = isPotentialCapture;
         Coord = coord;
     }
 
@@ -35,7 +38,9 @@ public class SquareViewModel
         ? Coord.RankChar.ToString()
         : string.Empty;
 
-    public Brush? Stroke => _isHighlighted ? Brushes.Blue : null;
+    public double Opacity => _isSelected ? 0.5 : 1.0;
 
-    public double Opacity => _isSelected ? 0.5 : _isHighlighted ? 0.75 : 1.0;
+    public Visibility PotentialMoveHighlighting => _isPotentialMove ? Visibility.Visible : Visibility.Hidden;
+
+    public Visibility PotentialCaptureHighlighting => _isPotentialCapture ? Visibility.Visible : Visibility.Hidden;
 }
