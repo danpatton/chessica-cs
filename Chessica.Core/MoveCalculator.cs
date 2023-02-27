@@ -126,7 +126,10 @@ public static class MoveCalculator
                                         pawnMoves.Add(new PromotionMove(ownPawn, coord, true, promotion));
                                     }
                                 }
-                                pawnMoves.Add(new Move(Piece.Pawn, ownPawn, coord, true));
+                                else
+                                {
+                                    pawnMoves.Add(new Move(Piece.Pawn, ownPawn, coord, true));
+                                }
                             }
                         }
                     }
