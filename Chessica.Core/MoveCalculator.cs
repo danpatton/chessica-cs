@@ -38,13 +38,14 @@ public static class MoveCalculator
         if (!inCheck)
         {
             // castling
+            var allPieces = ownPieces | enemyPieces;
             var squaresWeCannotCastleThrough = ownPieces | enemyPieces | moveConstraints.AttackedSquares;
             if (ownSide.CanCastleShort)
             {
                 var kingToSquare = ownKing with { File = 6 };
                 var rookToSquare = ownKing with { File = 5 };
-                var inBetweenSquares = new[] { rookToSquare, kingToSquare };
-                if (!inBetweenSquares.Any(squaresWeCannotCastleThrough.IsOccupied))
+                var castleThroughSquares = new[] { rookToSquare, kingToSquare };
+                if (!castleThroughSquares.Any(squaresWeCannotCastleThrough.IsOccupied))
                 {
                     moves.Add(new CastlingMove(ownKing, kingToSquare));
                 }
@@ -54,8 +55,9 @@ public static class MoveCalculator
             {
                 var kingToSquare = ownKing with { File = 2 };
                 var rookToSquare = ownKing with { File = 3 };
-                var inBetweenSquares = new[] { rookToSquare, kingToSquare };
-                if (!inBetweenSquares.Any(squaresWeCannotCastleThrough.IsOccupied))
+                var inBetweenSquare = ownKing with { File = 1 };
+                var castleThroughSquares = new[] { rookToSquare, kingToSquare };
+                if (!castleThroughSquares.Any(squaresWeCannotCastleThrough.IsOccupied) && !allPieces.IsOccupied(inBetweenSquare))
                 {
                     moves.Add(new CastlingMove(ownKing, kingToSquare));
                 }
