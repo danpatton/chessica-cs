@@ -63,53 +63,50 @@ a, .btn-link {
         content: "An error has occurred."
     }
 
-.wrapper {
+.panel-wrapper {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    grid-template-rows: 1r
+    grid-template-columns: repeat(3, 1fr);
 }
 
-.left-panel {
+.menu-bar-panel {
+    padding-bottom: 20px;
+}
+
+.board-panel {
     grid-column-start: 1;
     grid-column-end: 4;
 }
 
-.right-panel {
-    grid-column-start: 4;
-    grid-column-end: 5;
-}
-
-.header {
-    padding-bottom: 20px;
-    grid-column-start: 1;
-    grid-column-end: 5;
-}
-
-.footer {
+.status-bar-panel {
     padding-top: 20px;
     grid-column-start: 1;
-    grid-column-end: 5;
+    grid-column-end: 4;
 }
 
-.menu-button-disabled {
-    opacity: 0.5;
+.move-history-panel {
+    grid-column-start: 1;
+    grid-column-end: 4;
 }
 
 .menu-button {
     background-color: dodgerblue;
     border: none;
     color: white;
-    padding: 15px 32px;
+    padding: 10px 20px;
     text-align: center;
     text-decoration: none;
     display: inline-block;
-    font-size: 16px;
+    font-size: 12px;
+}
+
+.menu-button-disabled {
+    opacity: 0.5;
 }
 
 .board {
     display: grid;
-    width: 640px;
-    height: 640px;
+    width: 500px;
+    height: 500px;
     grid-template-columns: repeat(8, 1fr);
     grid-template-rows: repeat(8, 1fr);
 }

@@ -5,13 +5,17 @@
 @using System.Collections.Immutable
 @using System.Text
 
-<div class="wrapper">
-    <div class="header">
+<div class="panel-wrapper">
+    <div class="menu-bar-panel">
         <button class="menu-button" onclick="@NewGame_White_OnClick">New Game (White)</button>
+    </div>
+    <div class="menu-bar-panel">
         <button class="menu-button" onclick="@NewGame_Black_OnClick">New Game (Black)</button>
+    </div>
+    <div class="menu-bar-panel">
         <button class="menu-button @(CanUndo ? "" : "menu-button-disabled")" onclick="@Undo_OnClick">Undo Last Full Move</button>
     </div>
-    <div class="left-panel">
+    <div class="board-panel">
         <div class="board">
             @foreach (var coord in AllCoords)
             {
@@ -27,14 +31,15 @@
             }
         </div>
     </div>
-    <div class="right-panel">
-        <span style="text-align: center; font-weight: bold; font-size: 18pt">Move History</span>
+    <div class="status-bar-panel">
+        <span style="font-weight: bold; font-size: 14pt">Status</span>
+        <p>@(StatusMessage)</p>
+    </div>
+    <div class="move-history-panel">
+        <span style="font-weight: bold; font-size: 14pt">Move History</span>
         <div>
             <pre>@(PgnMoveHistory)</pre>
         </div>
-    </div>
-    <div class="footer">
-        @(StatusMessage)
     </div>
 </div>
 
@@ -92,6 +97,7 @@
         _legalMoves = _boardState.GetLegalMoves().ToList();
         _pgnMoves = new List<PgnMove>();
         _pgnResult = PgnGameResult.Other;
+        StatusMessage = string.Empty;
         if (!IsUsersMove)
         {
             await MakeEngineMove();
