@@ -1,4 +1,6 @@
-﻿namespace Chessica.Core;
+﻿using Optional;
+
+namespace Chessica.Core;
 
 public static class Extensions
 {
@@ -148,5 +150,14 @@ public static class Extensions
             Side.Black => double.MinValue,
             _ => throw new ArgumentOutOfRangeException()
         };
+    }
+
+    public static async Task MatchSomeAsync<T>(this Option<T> option, Func<T, Task> someAction)
+    {
+        if (option.HasValue)
+        {
+            var value = option.ValueOr(default(T)!);
+            await someAction(value);
+        }
     }
 }
