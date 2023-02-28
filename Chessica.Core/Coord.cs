@@ -1,15 +1,15 @@
 ﻿namespace Chessica.Core;
 
-public record struct Coord(byte File, byte Rank)
+public record struct Coord(int File, int Rank)
 {
-    public byte Ordinal => (byte)(Rank * 8 + File);
+    public int Ordinal => Rank * 8 + File;
 
     public bool IsDarkSquare => (Rank + File) % 2 == 0;
 
-    public static Coord FromOrdinal(byte ordinal)
+    public static Coord FromOrdinal(int ordinal)
     {
-        if (ordinal > 63) throw new Exception("Invalid ordinal");
-        var (rank, file) = Math.DivRem(ordinal, (byte)8);
+        if (ordinal is < 0 or > 63) throw new Exception("Invalid ordinal");
+        var (rank, file) = Math.DivRem(ordinal, 8);
         return new Coord(file, rank);
     }
 
@@ -18,12 +18,12 @@ public record struct Coord(byte File, byte Rank)
         s = s.ToLower();
         var file = s[0] - 'a';
         var rank = s[1] - '1';
-        if (file < 0 || file > 7 || rank < 0 || rank > 7)
+        if (file is < 0 or > 7 || rank is < 0 or > 7)
         {
             throw new Exception($"Malformed coordinate: {s}");
         }
 
-        return new Coord((byte)file, (byte)rank);
+        return new Coord(file, rank);
     }
 
     public char FileChar => (char)('a' + File);
@@ -35,7 +35,7 @@ public record struct Coord(byte File, byte Rank)
     public static IEnumerable<Coord> All => 
         from rank in Enumerable.Range(0, 8)
         from file in Enumerable.Range(0, 8)
-        select new Coord((byte)file, (byte)rank);
+        select new Coord(file, rank);
 
     public IEnumerable<IReadOnlyList<Coord>> MoveSequences(Piece pieceType, Side side, bool attacksOnly = false)
     {
@@ -64,22 +64,22 @@ public record struct Coord(byte File, byte Rank)
         var rankDirection = side == Side.White ? 1 : -1;
         if (!attacksOnly)
         {
-            var startingRank = side == Side.White ? (byte)1 : (byte)6;
+            var startingRank = side == Side.White ? 1 : 6;
             if (Rank == startingRank)
             {
-                yield return new[] { this with { Rank = (byte)(Rank + rankDirection + rankDirection) } };
+                yield return new[] { this with { Rank = (Rank + rankDirection + rankDirection) } };
             }
 
-            yield return new[] { this with { Rank = (byte)(Rank + rankDirection) } };
+            yield return new[] { this with { Rank = Rank + rankDirection } };
         }
 
         if (File > 0)
         {
-            yield return new[] { new Coord { Rank = (byte)(Rank + rankDirection), File = (byte)(File - 1) } };
+            yield return new[] { new Coord { Rank = Rank + rankDirection, File = File - 1 } };
         }
         if (File < 7)
         {
-            yield return new[] { new Coord { Rank = (byte)(Rank + rankDirection), File = (byte)(File + 1) } };
+            yield return new[] { new Coord { Rank = Rank + rankDirection, File = File + 1 } };
         }
     }
 
@@ -88,22 +88,22 @@ public record struct Coord(byte File, byte Rank)
         var nw = new List<Coord>();
         for (int i = Rank + 1, j = File - 1; i < 8 && j >= 0; ++i, --j)
         {
-            nw.Add(new Coord { Rank = (byte)i, File = (byte)j });
+            nw.Add(new Coord { Rank = i, File = j });
         }
         var ne = new List<Coord>();
         for (int i = Rank + 1, j = File + 1; i < 8 && j < 8; ++i, ++j)
         {
-            ne.Add(new Coord { Rank = (byte)i, File = (byte)j });
+            ne.Add(new Coord { Rank = i, File = j });
         }
         var sw = new List<Coord>();
         for (int i = Rank - 1, j = File - 1; i >= 0 && j >= 0; --i, --j)
         {
-            sw.Add(new Coord { Rank = (byte)i, File = (byte)j });
+            sw.Add(new Coord { Rank = i, File = j });
         }
         var se = new List<Coord>();
         for (int i = Rank - 1, j = File + 1; i >= 0 && j < 8; --i, ++j)
         {
-            se.Add(new Coord { Rank = (byte)i, File = (byte)j });
+            se.Add(new Coord { Rank = i, File = j });
         }
 
         return new[] { nw, ne, sw, se };
@@ -113,23 +113,23 @@ public record struct Coord(byte File, byte Rank)
     {
         if (File > 0)
         {
-            if (Rank > 1) yield return new[] { new Coord { File = (byte)(File - 1), Rank = (byte)(Rank - 2)} };
-            if (Rank < 6) yield return new[] { new Coord { File = (byte)(File - 1), Rank = (byte)(Rank + 2)} };
+            if (Rank > 1) yield return new[] { new Coord { File = File - 1, Rank = Rank - 2} };
+            if (Rank < 6) yield return new[] { new Coord { File = File - 1, Rank = Rank + 2} };
         }
         if (File > 1)
         {
-            if (Rank > 0) yield return new[] { new Coord { File = (byte)(File - 2), Rank = (byte)(Rank - 1)} };
-            if (Rank < 7) yield return new[] { new Coord { File = (byte)(File - 2), Rank = (byte)(Rank + 1)} };
+            if (Rank > 0) yield return new[] { new Coord { File = File - 2, Rank = Rank - 1} };
+            if (Rank < 7) yield return new[] { new Coord { File = File - 2, Rank = Rank + 1} };
         }
         if (File < 6)
         {
-            if (Rank > 0) yield return new[] { new Coord { File = (byte)(File + 2), Rank = (byte)(Rank - 1)} };
-            if (Rank < 7) yield return new[] { new Coord { File = (byte)(File + 2), Rank = (byte)(Rank + 1)} };
+            if (Rank > 0) yield return new[] { new Coord { File = File + 2, Rank = Rank - 1} };
+            if (Rank < 7) yield return new[] { new Coord { File = File + 2, Rank = Rank + 1} };
         }
         if (File < 7)
         {
-            if (Rank > 1) yield return new[] { new Coord { File = (byte)(File + 1), Rank = (byte)(Rank - 2)} };
-            if (Rank < 6) yield return new[] { new Coord { File = (byte)(File + 1), Rank = (byte)(Rank + 2)} };
+            if (Rank > 1) yield return new[] { new Coord { File = File + 1, Rank = Rank - 2} };
+            if (Rank < 6) yield return new[] { new Coord { File = File + 1, Rank = Rank + 2} };
         }
     }
 
@@ -138,22 +138,22 @@ public record struct Coord(byte File, byte Rank)
         var n = new List<Coord>();
         for (var i = Rank + 1; i < 8; ++i)
         {
-            n.Add(this with { Rank = (byte)i });
+            n.Add(this with { Rank = i });
         }
         var e = new List<Coord>();
         for (var i = File + 1; i < 8; ++i)
         {
-            e.Add(this with { File = (byte)i });
+            e.Add(this with { File = i });
         }
         var s = new List<Coord>();
         for (var i = Rank - 1; i >= 0; --i)
         {
-            s.Add(this with { Rank = (byte)i });
+            s.Add(this with { Rank = i });
         }
         var w = new List<Coord>();
         for (var i = File - 1; i >= 0; --i)
         {
-            w.Add(this with { File = (byte)i });
+            w.Add(this with { File = i });
         }
 
         return new[] { n, e, s, w };
@@ -168,17 +168,17 @@ public record struct Coord(byte File, byte Rank)
     {
         if (Rank > 0)
         {
-            yield return new[] { this with { Rank = (byte)(Rank - 1)} };
-            if (File > 0) yield return new[] { new Coord { Rank = (byte)(Rank - 1), File = (byte)(File - 1) } };
-            if (File < 7) yield return new[] { new Coord { Rank = (byte)(Rank - 1), File = (byte)(File + 1) } };
+            yield return new[] { this with { Rank = Rank - 1} };
+            if (File > 0) yield return new[] { new Coord { Rank = Rank - 1, File = File - 1 } };
+            if (File < 7) yield return new[] { new Coord { Rank = Rank - 1, File = File + 1 } };
         }
-        if (File > 0) yield return new[] { this with { File = (byte)(File - 1) } };
-        if (File < 7) yield return new[] { this with { File = (byte)(File + 1) } };
+        if (File > 0) yield return new[] { this with { File = File - 1 } };
+        if (File < 7) yield return new[] { this with { File = File + 1 } };
         if (Rank < 7)
         {
-            yield return new[] { this with { Rank = (byte)(Rank + 1)} };
-            if (File > 0) yield return new[] { new Coord { Rank = (byte)(Rank + 1), File = (byte)(File - 1) } };
-            if (File < 7) yield return new[] { new Coord { Rank = (byte)(Rank + 1), File = (byte)(File + 1) } };
+            yield return new[] { this with { Rank = Rank + 1} };
+            if (File > 0) yield return new[] { new Coord { Rank = Rank + 1, File = File - 1 } };
+            if (File < 7) yield return new[] { new Coord { Rank = Rank + 1, File = File + 1 } };
         }
     }
 

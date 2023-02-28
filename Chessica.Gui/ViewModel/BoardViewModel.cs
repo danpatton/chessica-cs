@@ -80,9 +80,9 @@ public class BoardViewModel : INotifyPropertyChanged
     {
         var boardInverted = UserSide == Side.Black;
         Squares.Clear();
-        for (byte file = 0; file < 8; ++file)
+        for (var file = 0; file < 8; ++file)
         {
-            for (byte rank = 0; rank < 8; ++rank)
+            for (var rank = 0; rank < 8; ++rank)
             {
                 var coord = new Coord(file, rank);
                 var square = new SquareViewModel(

@@ -65,7 +65,7 @@ public class Move
         {
             var squareOfCapturedPiece = Piece == Piece.Pawn
                 ? moveUndoInfo.EnemySideEnPassantSquare.Match(
-                    x => x == To ? To with { Rank = (byte)(To.Rank == 5 ? 4 : 3) } : To,
+                    x => x == To ? To with { Rank = To.Rank == 5 ? 4 : 3 } : To,
                     () => To)
                 : To;
             enemySide.UndoCapture(capturedPiece, squareOfCapturedPiece);

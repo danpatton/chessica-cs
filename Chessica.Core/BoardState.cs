@@ -72,7 +72,7 @@ public class BoardState
             var fromFile = string.IsNullOrEmpty(promotionMoveMatch.Groups[1].Value)
                 ? to.File
                 : promotionMoveMatch.Groups[1].Value[0] - 'a';
-            var from = new Coord { File = (byte)fromFile, Rank = (byte)fromRank };
+            var from = new Coord { File = fromFile, Rank = fromRank };
             return new PromotionMove(from, to, isCapture, promotionPiece);
         }
 
@@ -88,13 +88,13 @@ public class BoardState
             if (!string.IsNullOrEmpty(fromFileForDisambiguation))
             {
                 var fromFile = fromFileForDisambiguation[0] - 'a';
-                candidateMoves = candidateMoves.Where(m => m.From.File == (byte)fromFile);
+                candidateMoves = candidateMoves.Where(m => m.From.File == fromFile);
             }
             var fromRankForDisambiguation = standardMoveMatch.Groups[3].Value;
             if (!string.IsNullOrEmpty(fromRankForDisambiguation))
             {
                 var fromRank = fromRankForDisambiguation[0] - '1';
-                candidateMoves = candidateMoves.Where(m => m.From.Rank == (byte)fromRank);
+                candidateMoves = candidateMoves.Where(m => m.From.Rank == fromRank);
             }
 
             var finalCandidateMoves = candidateMoves.ToList();
@@ -179,7 +179,7 @@ public class BoardState
                 else
                 {
                     var (piece, side) = c.ParseFenChar();
-                    var coord = new Coord { File = (byte)file, Rank = (byte)rank };
+                    var coord = new Coord { File = file, Rank = rank };
                     switch (side)
                     {
                         case Side.White:
@@ -343,7 +343,7 @@ public class BoardState
             var blankSquareCount = 0;
             for (var file = 0; file < 8; ++file)
             {
-                var coord = new Coord { File = (byte)file, Rank = (byte)rank };
+                var coord = new Coord { File = file, Rank = rank };
                 var whitePiece = _whiteState.GetPiece(coord);
                 var blackPiece = _blackState.GetPiece(coord);
                 Debug.Assert(!whitePiece.HasValue || !blackPiece.HasValue, $"Both sides occupying {coord} !?");

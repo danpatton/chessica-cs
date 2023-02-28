@@ -245,7 +245,7 @@ public class SideState
     public void ApplyEnPassantCapture(Coord coord)
     {
         var targetPawnRank = Side == Side.White ? 3 : 4;
-        var targetPawn = coord with { Rank = (byte)targetPawnRank };
+        var targetPawn = coord with { Rank = targetPawnRank };
         Pawns &= ~(BitBoard)targetPawn;
     }
 
