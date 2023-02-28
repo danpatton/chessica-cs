@@ -74,6 +74,9 @@
     public void Undo_OnClick()
     {
         if (!CanUndo) return;
+        _boardState.TryPop();
+        _boardState.TryPop();
+        _legalMoves = _boardState.GetLegalMoves().ToList();
         _pgnResult = PgnGameResult.Other;
         _pgnMoves.RemoveRange(_pgnMoves.Count - 2, 2);
         if (_pgnMoves.Any())
@@ -85,8 +88,6 @@
         {
             StatusMessage = string.Empty;
         }
-        _boardState.TryPop();
-        _boardState.TryPop();
     }
 
     public async Task NewGame(Side userSide)
