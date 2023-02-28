@@ -119,4 +119,17 @@ public class BoardStateTests
         var outputFen = boardState.ToFenString();
         Assert.That(outputFen, Is.EqualTo(inputFen));
     }
+
+    [TestCase("7k/8/8/6q1/8/4q1N1/8/1K6 b - - 0 1", "e3", "g3", "Qexg3")]
+    [TestCase("7k/8/8/6q1/8/4q1N1/8/1K6 b - - 0 1", "g5", "g3", "Q5xg3")]
+    [TestCase("7k/8/8/4q1q1/8/4q1N1/8/1K6 b - - 0 1", "e3", "g3", "Qe3xg3")]
+    [TestCase("7k/8/8/4q1q1/8/4q1N1/8/1K6 b - - 0 1", "g5", "g3", "Qg5xg3")]
+    [TestCase("7k/8/8/4q1q1/8/4q1N1/8/1K6 b - - 0 1", "e5", "g3", "Qe5xg3")]
+    public void TestRankAndFileDisambiguation(string inputFen, string from, string to, string expectedPgnSpec)
+    {
+        var board = BoardState.ParseFen(inputFen);
+        var move = new Move(Piece.Queen, from, to, true);
+        var pgnSpec = move.ToPgnSpec(board);
+        Assert.That(pgnSpec, Is.EqualTo(expectedPgnSpec));
+    }
 }

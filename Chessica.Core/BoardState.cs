@@ -122,8 +122,14 @@ public class BoardState
 
     public string GetPgnCoordDisambiguation(Piece pieceType, Coord from, Coord to)
     {
-        var needsExplicitFile = false;
-        var needsExplicitRank = false;
+        var potentiallyAmbiguousMoves = GetLegalMoves()
+            .Where(m => m.Piece == pieceType && m.To == to && m.From != from)
+            .ToArray();
+
+        var needsExplicitFile = potentiallyAmbiguousMoves.Any(
+            move => move.From.File != from.File && move.From.File == to.File);
+        var needsExplicitRank = potentiallyAmbiguousMoves.Any(
+            move => move.From.Rank != from.Rank && move.From.Rank == to.Rank);
 
         foreach (var move in GetLegalMoves().Where(m => m.Piece == pieceType && m.To == to && m.From != from))
         {
