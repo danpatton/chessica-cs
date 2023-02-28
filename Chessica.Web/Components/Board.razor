@@ -54,7 +54,7 @@
     BoardState _boardState = BoardState.StartingPosition;
     Option<Coord> _selectedSquare;
     List<Move> _legalMoves = new();
-    List<PgnMove> _pgnMoves = new();
+    Stack<PgnMove> _pgnMoves = new();
     private PgnGameResult _pgnResult = PgnGameResult.Other;
 
     public async Task NewGame_White_OnClick()
@@ -67,7 +67,7 @@
         await NewGame(Side.Black);
     }
 
-    public bool CanUndo => IsUsersMove && _boardState.FullMoveNumber > 0;
+    public bool CanUndo = false;
     
     public string StatusMessage { get; set; } = string.Empty;
 
@@ -75,10 +75,16 @@
     {
         if (!CanUndo) return;
         _boardState.TryPop();
-        _boardState.TryPop();
-        _legalMoves = _boardState.GetLegalMoves().ToList();
+        var lastMove = _pgnMoves.Pop();
+        if (lastMove.Side == EngineSide)
+        {
+            // also pop user's last move
+            _boardState.TryPop();
+            _pgnMoves.Pop();
+        }
+        CanUndo = _pgnMoves.Count > (UserSide == Side.White ? 1 : 2);
         _pgnResult = PgnGameResult.Other;
-        _pgnMoves.RemoveRange(_pgnMoves.Count - 2, 2);
+        _legalMoves = _boardState.GetLegalMoves().ToList();
         if (_pgnMoves.Any())
         {
             var lastEngineMove = _pgnMoves.Last();
@@ -96,7 +102,7 @@
         _boardState = BoardState.StartingPosition;
         _selectedSquare = Option.None<Coord>();
         _legalMoves = _boardState.GetLegalMoves().ToList();
-        _pgnMoves = new List<PgnMove>();
+        _pgnMoves = new Stack<PgnMove>();
         _pgnResult = PgnGameResult.Other;
         StatusMessage = string.Empty;
         if (!IsUsersMove)
@@ -119,6 +125,7 @@
                 : "Managed to snatch a draw off you!";
             return;
         }
+        CanUndo = false;
         StatusMessage = "Thinking...";
         var engineMove = await Task.Run(() => new MiniMaxMoveGenerator(4).GetBestMove(_boardState));
         var pgnSpec = engineMove.ToPgnSpec(_boardState);
@@ -128,7 +135,8 @@
         {
             pgnSpec += numLegalMoves == 0 ? "#" : "+";
         }
-        _pgnMoves.Add(new PgnMove(EngineSide, pgnSpec));
+        _pgnMoves.Push(new PgnMove(EngineSide, pgnSpec));
+        CanUndo = _pgnMoves.Count > (UserSide == Side.White ? 1 : 2);
         if (inCheck)
         {
             if (numLegalMoves == 0)
@@ -161,7 +169,7 @@
         get
         {
             using var memoryStream = new MemoryStream();
-            new PgnGame(ImmutableDictionary<string, string>.Empty, _pgnMoves.ToImmutableArray(), _pgnResult).WriteToStream(memoryStream);
+            new PgnGame(ImmutableDictionary<string, string>.Empty, _pgnMoves.Reverse().ToImmutableArray(), _pgnResult).WriteToStream(memoryStream);
             return Encoding.UTF8.GetString(memoryStream.ToArray());
         }
     }
@@ -247,7 +255,7 @@
                 {
                     moveSpec += numLegalMoves == 0 ? "#" : "+";
                 }
-                _pgnMoves.Add(new PgnMove(UserSide, moveSpec));
+                _pgnMoves.Push(new PgnMove(UserSide, moveSpec));
 
                 break;
             }
@@ -261,7 +269,15 @@
                 if (!result.Cancelled && result.Data is Piece piece)
                 {
                     var move = potentialMoves.OfType<PromotionMove>().Single(m => m.Promotion == piece);
+                    var moveSpec = move.ToPgnSpec(_boardState);
                     _boardState.Push(move);
+
+                    var (inCheck, numLegalMoves) = _boardState.GetGameState();
+                    if (inCheck)
+                    {
+                        moveSpec += numLegalMoves == 0 ? "#" : "+";
+                    }
+                    _pgnMoves.Push(new PgnMove(UserSide, moveSpec));
                 }
                 break;
             }
@@ -272,5 +288,67 @@
     protected override async Task OnInitializedAsync()
     {
         await NewGame(Side.White);
+        LoadGame();
+    }
+
+    private void LoadGame()
+    {
+        const string pgn = @"1. e4 e6
+2. Nc3 d6
+3. d4 e5
+4. dxe5 dxe5
+5. Bb5+ Nd7
+6. Nf3 Bd6
+7. O-O Nf6
+8. Bg5 O-O
+9. Nb1 h6
+10. Bxd7 Bxd7
+11. Bxf6 Qxf6
+12. Qd2 Bb5
+13. c4 Bxc4
+14. Rc1 b5
+15. Qd1 Rfd8
+16. a3 Bb4
+17. Qc2 Ba5
+18. b3 Bd3
+19. Qc5 Bxe4
+20. Qxb5 Bxf3
+21. g3 Qf5
+22. Qa6 Qh3
+23. Qf1 Qxf1+
+24. Rxf1 Rab8
+25. b4 Bb6
+26. Re1 Bd4
+27. Ra2 c5
+28. Rd2 c4
+29. Kf1 c3
+30. Rc2 Bg4
+31. Nxc3 Bxc3
+32. Rxc3 Rd2
+33. Rxe5 Rbd8
+34. Kg1 Bh3
+35. Rce3 Rd1+
+36. Re1 Rxe1+
+37. Rxe1 Rd3
+38. Re8+ Kh7
+39. Re1 Rxa3
+40. Kh1 Rb3
+41. Ra1 Rxb4
+42. Kg1 a5
+43. Kh1 a4
+44. Kg1 a3
+45. Kh1 a2
+46. Rc1 
+";
+
+        _boardState = BoardState.StartingPosition;
+        var pgnGame = PgnGame.Parse(pgn);
+        foreach (var pgnMove in pgnGame.Moves)
+        {
+            _boardState.Push(_boardState.ToMove(pgnMove.Spec));
+            _pgnMoves.Push(pgnMove);
+        }
+        _legalMoves = _boardState.GetLegalMoves().ToList();
+        UserSide = Side.Black;
     }
 }
