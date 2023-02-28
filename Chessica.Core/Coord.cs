@@ -32,6 +32,11 @@ public record struct Coord(byte File, byte Rank)
 
     public override string ToString() => new(new[] { FileChar, RankChar });
 
+    public static IEnumerable<Coord> All => 
+        from rank in Enumerable.Range(0, 8)
+        from file in Enumerable.Range(0, 8)
+        select new Coord((byte)file, (byte)rank);
+
     public IEnumerable<IReadOnlyList<Coord>> MoveSequences(Piece pieceType, Side side, bool attacksOnly = false)
     {
         switch (pieceType)
