@@ -14,11 +14,11 @@ public class MiniMaxMoveGenerator : IMoveGenerator
 
     public bool TryGetBestMove(BoardState boardState, out Move? bestMove)
     {
-        return MiniMaxSearch.TryGetBestMove(boardState, _maxDepth, out bestMove);
+        return MiniMaxSearch.TryGetBestMove(boardState.Clone(), _maxDepth, out bestMove);
     }
 
     public Move GetBestMove(BoardState boardState)
     {
-        return MiniMaxSearch.GetBestMove(boardState, _maxDepth);
+        return MiniMaxSearch.GetBestMove(boardState.Clone(), _maxDepth);
     }
 }

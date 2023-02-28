@@ -27,6 +27,11 @@ public class BoardState
         FullMoveNumber = fullMoveNumber;
     }
 
+    public BoardState Clone()
+    {
+        return new BoardState(_whiteState.Clone(), _blackState.Clone(), SideToMove, HalfMoveClock, FullMoveNumber);
+    }
+
     private readonly Regex _castlingMoveRegex = new("([Oo0](-[Oo0]){1,2})[+#]?");
     private readonly Regex _promotionMoveRegex = new("([a-h])?(x)?([a-h][1-8])\\=([QRBN])[+#]?");
     private readonly Regex _standardMoveRegex = new ("([KQRBN])?([a-h])?([1-8])?(x)?([a-h][1-8])[+#]?");
