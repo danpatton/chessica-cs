@@ -1,0 +1,269 @@
+﻿@using Chessica.Core
+@using Chessica.Pgn
+@using Chessica.Uci
+@using Optional
+@using System.Collections.Immutable
+@using System.Text
+
+<div class="wrapper">
+    <div class="header">
+        <button class="menu-button" onclick="@NewGame_White_OnClick">New Game (White)</button>
+        <button class="menu-button" onclick="@NewGame_Black_OnClick">New Game (Black)</button>
+        <button class="menu-button @(CanUndo ? "" : "menu-button-disabled")" onclick="@Undo_OnClick">Undo Last Full Move</button>
+    </div>
+    <div class="left-panel">
+        <div class="board">
+            @foreach (var coord in AllCoords)
+            {
+                <Square Board="_boardState"
+                        Coord="coord"
+                        BoardInverted="BoardInverted"
+                        IsSelected="IsSelected(coord)"
+                        IsPotentialMove="IsPotentialMove(coord)"
+                        IsPotentialCapture="IsPotentialCapture(coord)"
+                        OnClick="Square_OnClick"
+                        OnDragStart="Square_OnDragStart"
+                        OnDrop="Square_OnDrop"/>
+            }
+        </div>
+    </div>
+    <div class="right-panel">
+        <span style="text-align: center; font-weight: bold; font-size: 18pt">Move History</span>
+        <div>
+            <pre>@(PgnMoveHistory)</pre>
+        </div>
+    </div>
+    <div class="footer">
+        @(StatusMessage)
+    </div>
+</div>
+
+@code {
+
+    [CascadingParameter] public IModalService Modal { get; set; } = default!;
+
+    public Side UserSide { get; set; }
+
+    public Side EngineSide => UserSide == Side.White ? Side.Black : Side.White;
+
+    BoardState _boardState = BoardState.StartingPosition;
+    Option<Coord> _selectedSquare;
+    List<Move> _legalMoves = new();
+    List<PgnMove> _pgnMoves = new();
+    private PgnGameResult _pgnResult = PgnGameResult.Other;
+
+    public async Task NewGame_White_OnClick()
+    {
+        await NewGame(Side.White);
+    }
+
+    public async Task NewGame_Black_OnClick()
+    {
+        await NewGame(Side.Black);
+    }
+
+    public bool CanUndo => IsUsersMove && _boardState.FullMoveNumber > 0;
+    
+    public string StatusMessage { get; set; } = string.Empty;
+
+    public void Undo_OnClick()
+    {
+        if (!CanUndo) return;
+        _pgnResult = PgnGameResult.Other;
+        _pgnMoves.RemoveRange(_pgnMoves.Count - 2, 2);
+        if (_pgnMoves.Any())
+        {
+            var lastEngineMove = _pgnMoves.Last();
+            StatusMessage = $"Last engine move: {lastEngineMove.Spec}";
+        }
+        else
+        {
+            StatusMessage = string.Empty;
+        }
+        _boardState.TryPop();
+        _boardState.TryPop();
+    }
+
+    public async Task NewGame(Side userSide)
+    {
+        UserSide = userSide;
+        _boardState = BoardState.StartingPosition;
+        _selectedSquare = Option.None<Coord>();
+        _legalMoves = _boardState.GetLegalMoves().ToList();
+        _pgnMoves = new List<PgnMove>();
+        _pgnResult = PgnGameResult.Other;
+        if (!IsUsersMove)
+        {
+            await MakeEngineMove();
+        }
+    }
+
+    public async Task MakeEngineMove()
+    {
+        if (IsUsersMove) return;
+        var (inCheck, numLegalMoves) = _boardState.GetGameState();
+        if (numLegalMoves == 0)
+        {
+            _pgnResult = inCheck
+                ? UserSide == Side.White ? PgnGameResult.WhiteWin : PgnGameResult.BlackWin
+                : PgnGameResult.Draw;
+            StatusMessage = inCheck
+                ? "Bloody hell mate, looks like you've got me!"
+                : "Managed to snatch a draw off you!";
+            return;
+        }
+        StatusMessage = "Thinking...";
+        var engineMove = await Task.Run(() => new MiniMaxMoveGenerator(4).GetBestMove(_boardState));
+        var pgnSpec = engineMove.ToPgnSpec(_boardState);
+        _boardState.Push(engineMove);
+        (inCheck, numLegalMoves) = _boardState.GetGameState();
+        if (inCheck)
+        {
+            pgnSpec += numLegalMoves == 0 ? "#" : "+";
+        }
+        _pgnMoves.Add(new PgnMove(EngineSide, pgnSpec));
+        if (inCheck)
+        {
+            if (numLegalMoves == 0)
+            {
+                _pgnResult = EngineSide == Side.White ? PgnGameResult.WhiteWin : PgnGameResult.BlackWin;
+                StatusMessage = "Human scum, you are no match for Chessica";
+                return;
+            }
+        }
+        else if (numLegalMoves == 0)
+        {
+            _pgnResult = PgnGameResult.Draw;
+            StatusMessage = "Looks a bit stale to me, mate";
+            return;
+        }
+        _legalMoves = _boardState.GetLegalMoves().ToList();
+        StatusMessage = $"Last engine move: {pgnSpec}";
+    }
+
+    public bool BoardInverted => UserSide == Side.Black;
+
+    public bool IsUsersMove => _boardState.SideToMove == UserSide;
+
+    public IEnumerable<Coord> AllCoords => BoardInverted
+        ? Coord.All.OrderBy(c => c.Rank).ThenByDescending(c => c.File)
+        : Coord.All.OrderByDescending(c => c.Rank).ThenBy(c => c.File);
+
+    public string PgnMoveHistory
+    {
+        get
+        {
+            using var memoryStream = new MemoryStream();
+            new PgnGame(ImmutableDictionary<string, string>.Empty, _pgnMoves.ToImmutableArray(), _pgnResult).WriteToStream(memoryStream);
+            return Encoding.UTF8.GetString(memoryStream.ToArray());
+        }
+    }
+
+    private bool IsSelected(Coord coord)
+    {
+        return _selectedSquare.Match(s => s == coord, () => false);
+    }
+
+    private bool IsPotentialMove(Coord coord)
+    {
+        return _selectedSquare.Match(
+            s => _legalMoves.Any(m => m.From == s && m.To == coord && !m.IsCapture),
+            () => false);
+    }
+
+    private bool IsPotentialCapture(Coord coord)
+    {
+        return _selectedSquare.Match(
+            s => _legalMoves.Any(m => m.From == s && m.To == coord && m.IsCapture),
+            () => false);
+    }
+
+    private async Task Square_OnClick(Coord coord)
+    {
+        if (!IsUsersMove) return;
+        if (_selectedSquare.HasValue)
+        {
+            await _selectedSquare.MatchSomeAsync(
+                async currentlySelected =>
+                {
+                    if (currentlySelected == coord)
+                    {
+                        _selectedSquare = Option.None<Coord>();
+                    }
+                    else
+                    {
+                        await TryMoveAsync(currentlySelected, coord);
+                    }
+                });
+        }
+        else
+        {
+            _boardState.GetPiece(UserSide, coord).MatchSome(_ => _selectedSquare = Option.Some(coord));
+        }
+
+        if (!IsUsersMove)
+        {
+            await MakeEngineMove();
+        }
+    }
+
+    private void Square_OnDragStart(Coord coord)
+    {
+        if (!IsUsersMove) return;
+        _boardState.GetPiece(UserSide, coord).MatchSome(_ => _selectedSquare = Option.Some(coord));
+    }
+
+    private async Task Square_OnDrop(Coord coord)
+    {
+        if (!IsUsersMove) return;
+        await _selectedSquare.MatchSomeAsync(
+            async currentlySelected => await TryMoveAsync(currentlySelected, coord));
+        if (!IsUsersMove)
+        {
+            await MakeEngineMove();
+        }
+    }
+
+    private async Task TryMoveAsync(Coord from, Coord to)
+    {
+        var potentialMoves = _legalMoves.Where(m => m.From == from && m.To == to).ToList();
+        switch (potentialMoves.Count)
+        {
+            case 1:
+            {
+                var move = potentialMoves.Single();
+                var moveSpec = move.ToPgnSpec(_boardState);
+                _boardState.Push(move);
+
+                var (inCheck, numLegalMoves) = _boardState.GetGameState();
+                if (inCheck)
+                {
+                    moveSpec += numLegalMoves == 0 ? "#" : "+";
+                }
+                _pgnMoves.Add(new PgnMove(UserSide, moveSpec));
+
+                break;
+            }
+            case > 1:
+            {
+                var promotionChoice = Modal.Show<PromotionChoice>(
+                    string.Empty, new ModalParameters().Add("UserSide", UserSide));
+
+                var result = await promotionChoice.Result;
+
+                if (!result.Cancelled && result.Data is Piece piece)
+                {
+                    var move = potentialMoves.OfType<PromotionMove>().Single(m => m.Promotion == piece);
+                    _boardState.Push(move);
+                }
+                break;
+            }
+        }
+        _selectedSquare = Option.None<Coord>();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await NewGame(Side.White);
+    }
+}

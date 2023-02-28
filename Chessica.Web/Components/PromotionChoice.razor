@@ -1,0 +1,38 @@
+﻿@using Chessica.Core
+
+<div>
+    <button @onclick="Queen_OnClick">
+        <img src=@QueenGlyph alt=""/>
+    </button>
+    <button @onclick="Rook_OnClick">
+        <img src=@RookGlyph alt=""/>
+    </button>
+    <button @onclick="Knight_OnClick">
+        <img src=@KnightGlyph alt=""/>
+    </button>
+    <button @onclick="Bishop_OnClick">
+        <img src=@BishopGlyph alt=""/>
+    </button>
+</div>
+
+@code {
+    [Parameter]
+    public Side UserSide { get; set; }
+    
+    [CascadingParameter] BlazoredModalInstance BlazoredModal { get; set; } = default!;
+
+    public string QueenGlyph => $"glyphs/{UserSide}Queen.svg";
+
+    public string RookGlyph => $"glyphs/{UserSide}Rook.svg";
+
+    public string KnightGlyph => $"glyphs/{UserSide}Knight.svg";
+
+    public string BishopGlyph => $"glyphs/{UserSide}Bishop.svg";
+
+    protected override void OnInitialized() => BlazoredModal.SetTitle("Choose Promotion Piece");
+
+    public async Task Queen_OnClick() => await BlazoredModal.CloseAsync(ModalResult.Ok(Piece.Queen));
+    public async Task Rook_OnClick() => await BlazoredModal.CloseAsync(ModalResult.Ok(Piece.Rook));
+    public async Task Knight_OnClick() => await BlazoredModal.CloseAsync(ModalResult.Ok(Piece.Knight));
+    public async Task Bishop_OnClick() => await BlazoredModal.CloseAsync(ModalResult.Ok(Piece.Bishop));
+}

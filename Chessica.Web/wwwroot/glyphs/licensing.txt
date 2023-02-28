@@ -1,0 +1,2 @@
+﻿All files in this directory were originally sourced from https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces
+and have not been modified. They are made freely available under the GNU Free Documentation License.

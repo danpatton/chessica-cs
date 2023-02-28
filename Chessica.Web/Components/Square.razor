@@ -1,0 +1,90 @@
+﻿@using Chessica.Core
+<div class="@ShadingClass @SelectionClass"
+     ondragover="event.preventDefault();"
+     @onclick="HandleClick"
+     @ondragstart="HandleDragStart"
+     @ondrop="HandleDrop"
+     >
+    @if (Board.IsOccupied(Coord))
+    {
+        <div class="piece-glyph">
+            <img src=@PieceGlyph alt="" width="100%" height="100%" />
+        </div>
+    }
+    @if (IsPotentialMove)
+    {
+        <div class="potential-move-marker"></div>
+    }
+    @if (IsPotentialCapture)
+    {
+        <div class="potential-capture-marker"></div>
+    }
+    <div class="rank-indicator @TextShadingClass">@RankIndicator</div>
+    <div class="file-indicator @TextShadingClass">@FileIndicator</div>
+</div>
+
+@code {
+    [Parameter]
+    public BoardState Board { get; set; }
+    
+    [Parameter]
+    public bool BoardInverted { get; set; }
+
+    [Parameter]
+    public Coord Coord { get; set; }
+    
+    [Parameter]
+    public bool IsSelected { get; set; }
+
+    [Parameter]
+    public bool IsPotentialMove { get; set; }
+
+    [Parameter]
+    public bool IsPotentialCapture { get; set; }
+
+    public string FileIndicator => Coord.Rank == (BoardInverted ? 7 : 0)
+        ? Coord.FileChar.ToString()
+        : string.Empty;
+
+    public string RankIndicator => Coord.File == (BoardInverted ? 0 : 7)
+        ? Coord.RankChar.ToString()
+        : string.Empty;
+
+    [Parameter]
+    public EventCallback<Coord> OnClick { get; set; }
+
+    [Parameter]
+    public EventCallback<Coord> OnDragStart { get; set; }
+
+    [Parameter]
+    public EventCallback<Coord> OnDrop { get; set; }
+
+    private async Task HandleClick()
+    {
+        await OnClick.InvokeAsync(Coord);
+    }
+
+    private async Task HandleDragStart()
+    {
+        await OnDragStart.InvokeAsync(Coord);
+    }
+
+    private async Task HandleDrop()
+    {
+        await OnDrop.InvokeAsync(Coord);
+    }
+
+    public bool IsOccupied => Board.IsOccupied(Coord);
+
+    public string PieceGlyph => Board.GetPiece(Side.White, Coord).Match(
+        piece => $"glyphs/White{piece}.svg",
+        () => Board.GetPiece(Side.Black, Coord).Match(
+            piece => $"glyphs/Black{piece}.svg",
+            () => ""));
+
+    public string ShadingClass => Coord.IsDarkSquare ? "dark-square" : "light-square";
+
+    public string TextShadingClass => Coord.IsDarkSquare ? "light-text" : "dark-text";
+
+    public string SelectionClass => IsSelected ? "selected-square" : "square";
+}
