@@ -120,15 +120,17 @@ public class BoardStateTests
         Assert.That(outputFen, Is.EqualTo(inputFen));
     }
 
-    [TestCase("7k/8/8/6q1/8/4q1N1/8/1K6 b - - 0 1", "e3", "g3", "Qexg3")]
-    [TestCase("7k/8/8/6q1/8/4q1N1/8/1K6 b - - 0 1", "g5", "g3", "Q5xg3")]
-    [TestCase("7k/8/8/4q1q1/8/4q1N1/8/1K6 b - - 0 1", "e3", "g3", "Qe3xg3")]
-    [TestCase("7k/8/8/4q1q1/8/4q1N1/8/1K6 b - - 0 1", "g5", "g3", "Qg5xg3")]
-    [TestCase("7k/8/8/4q1q1/8/4q1N1/8/1K6 b - - 0 1", "e5", "g3", "Qe5xg3")]
-    public void TestRankAndFileDisambiguation(string inputFen, string from, string to, string expectedPgnSpec)
+    [TestCase("7k/8/8/6q1/8/4q1N1/8/1K6 b - - 0 1", Piece.Queen, "e3", "g3", "Qexg3")]
+    [TestCase("7k/8/8/6q1/8/4q1N1/8/1K6 b - - 0 1", Piece.Queen, "g5", "g3", "Q5xg3")]
+    [TestCase("7k/8/8/4q1q1/8/4q1N1/8/1K6 b - - 0 1", Piece.Queen, "e3", "g3", "Qe3xg3")]
+    [TestCase("7k/8/8/4q1q1/8/4q1N1/8/1K6 b - - 0 1", Piece.Queen, "g5", "g3", "Qg5xg3")]
+    [TestCase("7k/8/8/4q1q1/8/4q1N1/8/1K6 b - - 0 1", Piece.Queen, "e5", "g3", "Qe5xg3")]
+    [TestCase("rn1qkb1r/pppBpp1p/3p1np1/8/3PP3/8/PPPN1PPP/R1BQK1NR b KQkq - 0 5", Piece.Knight, "b8", "d7", "Nbxd7")]
+    [TestCase("rn1qkb1r/pppBpp1p/3p1np1/8/3PP3/8/PPPN1PPP/R1BQK1NR b KQkq - 0 5", Piece.Knight, "f6", "d7", "Nfxd7")]
+    public void TestRankAndFileDisambiguation(string inputFen, Piece piece, string from, string to, string expectedPgnSpec)
     {
         var board = BoardState.ParseFen(inputFen);
-        var move = new Move(Piece.Queen, from, to, true);
+        var move = new Move(piece, from, to, true);
         var pgnSpec = move.ToPgnSpec(board);
         Assert.That(pgnSpec, Is.EqualTo(expectedPgnSpec));
     }

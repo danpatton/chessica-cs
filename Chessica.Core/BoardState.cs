@@ -126,15 +126,26 @@ public class BoardState
             .Where(m => m.Piece == pieceType && m.To == to && m.From != from)
             .ToArray();
 
-        var needsExplicitFile = potentiallyAmbiguousMoves.Any(
-            move => move.From.File != from.File && move.From.File == to.File);
-        var needsExplicitRank = potentiallyAmbiguousMoves.Any(
-            move => move.From.Rank != from.Rank && move.From.Rank == to.Rank);
-
-        foreach (var move in GetLegalMoves().Where(m => m.Piece == pieceType && m.To == to && m.From != from))
+        if (!potentiallyAmbiguousMoves.Any())
         {
-            needsExplicitFile |= move.From.Rank == from.Rank;
-            needsExplicitRank |= move.From.File == from.File;
+            return string.Empty;
+        }
+
+        var needsExplicitFile = false;
+        var needsExplicitRank = false;
+
+        if (from.File != to.File && potentiallyAmbiguousMoves.All(move => move.From.File != from.File))
+        {
+            needsExplicitFile = true;
+        }
+        else if (from.Rank != to.Rank && potentiallyAmbiguousMoves.All(move => move.From.Rank != from.Rank))
+        {
+            needsExplicitRank = true;
+        }
+        else
+        {
+            needsExplicitFile = true;
+            needsExplicitRank = true;
         }
 
         return (needsExplicitFile ? from.FileChar.ToString() : "") +
