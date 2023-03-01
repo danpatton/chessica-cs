@@ -9,6 +9,9 @@ public class BoardState
 {
     private readonly Stack<Tuple<Move, MoveUndoInfo>> _moveStack = new();
 
+    private Option<List<Move>> _cachedLegalMoves;
+    private Option<BitBoard> _cachedPassedPawns;
+
     private readonly SideState _whiteState;
     private readonly SideState _blackState;
 
@@ -231,9 +234,16 @@ public class BoardState
 
     public IEnumerable<Move> GetLegalMoves()
     {
-        var ownSide = SideToMove == Side.White ? _whiteState : _blackState;
-        var enemySide = SideToMove == Side.White ? _blackState : _whiteState;
-        return MoveCalculator.CalculateMoves(ownSide, enemySide, out _);
+        return _cachedLegalMoves.Match(
+            legalMoves => legalMoves,
+            () =>
+            {
+                var ownSide = SideToMove == Side.White ? _whiteState : _blackState;
+                var enemySide = SideToMove == Side.White ? _blackState : _whiteState;
+                var legalMoves = MoveCalculator.CalculateMoves(ownSide, enemySide, out _).ToList();
+                _cachedLegalMoves = Option.Some(legalMoves);
+                return legalMoves;
+            });
     }
 
     public IEnumerable<Move> GetPseudoLegalMoves()
@@ -323,6 +333,9 @@ public class BoardState
 
         _moveStack.Push(Tuple.Create(move, moveUndoInfo));
 
+        // mutated board state --> invalidate caches
+        InvalidateCaches();
+
         return new MovePopper(this);
     }
 
@@ -340,10 +353,20 @@ public class BoardState
             {
                 --FullMoveNumber;
             }
+
+            // mutated board state --> invalidate caches
+            InvalidateCaches();
+
             return true;
         }
 
         return false;
+    }
+
+    private void InvalidateCaches()
+    {
+        _cachedLegalMoves = Option.None<List<Move>>();
+        _cachedPassedPawns = Option.None<BitBoard>();
     }
 
     public string ToFenString(bool includeMoveClocks = true)
@@ -445,6 +468,42 @@ public class BoardState
 
     public bool IsOccupied(Coord coord) => _whiteState.AllPieces.IsOccupied(coord) ||
                                            _blackState.AllPieces.IsOccupied(coord);
+
+    public bool IsPassedPawn(Coord coord) => GetPassedPawns().IsOccupied(coord);
+
+    public BitBoard GetPassedPawns()
+    {
+        return _cachedPassedPawns.Match(
+            passedPawns => passedPawns,
+            () =>
+            {
+                var passedPawns = CalculatePassedPawns(Side.White) | CalculatePassedPawns(Side.Black);
+                _cachedPassedPawns = Option.Some(passedPawns);
+                return passedPawns;
+            });
+    }
+
+    private BitBoard CalculatePassedPawns(Side side)
+    {
+        var ownSide = side == Side.White ? _whiteState : _blackState;
+        var enemySide = side == Side.White ? _blackState : _whiteState;
+        var ownPawns = ownSide.Pawns;
+        var enemyPawns = enemySide.Pawns;
+        BitBoard ownPassedPawns = 0;
+        foreach (var ownPawn in ownPawns)
+        {
+            var fileMask = BitBoard.File(ownPawn.File);
+            if (ownPawn.File > 0) fileMask |= BitBoard.File(ownPawn.File - 1);
+            if (ownPawn.File < 7) fileMask |= BitBoard.File(ownPawn.File + 1);
+            var aheadMask = BitBoard.AheadOfRank(side, ownPawn.Rank);
+            var mask = fileMask & aheadMask & enemyPawns;
+            if (mask == 0)
+            {
+                ownPassedPawns |= ownPawn;
+            }
+        }
+        return ownPassedPawns;
+    }
 
     public string GetBoardHash()
     {

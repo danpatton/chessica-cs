@@ -111,7 +111,8 @@ public class Move
                     return -0.2;
             }
         }
-        else if (board.FullMoveNumber < 25)
+
+        if (board.FullMoveNumber < 25)
         {
             switch (Piece)
             {
@@ -124,8 +125,15 @@ public class Move
                     return To.Rank == seventh ? 0.3 : 0d;
             }
         }
+
+        if (Piece == Piece.Pawn && board.IsPassedPawn(From))
+        {
+            // push passed pawns
+            var rankScore = board.SideToMove == Side.White ? To.Rank : 7 - To.Rank;
+            return 0.05 * rankScore * rankScore;
+        }
         
-        // TODO: push passed pawns / get a rook behind a passed pawn
+        // TODO: get a rook behind a passed pawn
 
         return 0d;
     }
