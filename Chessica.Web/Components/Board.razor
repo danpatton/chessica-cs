@@ -112,19 +112,33 @@
         }
     }
 
+    private void GameOver(bool isCheckmate)
+    {
+        _legalMoves.Clear();
+        _pgnResult = isCheckmate
+            ? _boardState.SideToMove == Side.White ? PgnGameResult.BlackWin : PgnGameResult.WhiteWin
+            : PgnGameResult.Draw;
+        if (IsUsersMove)
+        {
+            StatusMessage = isCheckmate
+                ? "Human scum, you are no match for Chessica"
+                : "Looks a bit stale to me, mate";
+        }
+        else
+        {
+            StatusMessage = isCheckmate
+                ? "Bloody hell mate, looks like you've got me!"
+                : "Managed to snatch a draw off you!";
+        }
+    }
+
     public async Task MakeEngineMove()
     {
         if (IsUsersMove) return;
         var (inCheck, numLegalMoves) = _boardState.GetGameState();
         if (numLegalMoves == 0)
         {
-            _pgnResult = inCheck
-                ? UserSide == Side.White ? PgnGameResult.WhiteWin : PgnGameResult.BlackWin
-                : PgnGameResult.Draw;
-            _legalMoves.Clear();
-            StatusMessage = inCheck
-                ? "Bloody hell mate, looks like you've got me!"
-                : "Managed to snatch a draw off you!";
+            GameOver(isCheckmate: inCheck);
             return;
         }
         CanUndo = false;
@@ -139,25 +153,15 @@
         }
         _pgnMoves.Push(new PgnMove(EngineSide, pgnSpec));
         CanUndo = _pgnMoves.Count > (UserSide == Side.White ? 1 : 2);
-        if (inCheck)
+        if (numLegalMoves == 0)
         {
-            if (numLegalMoves == 0)
-            {
-                _pgnResult = EngineSide == Side.White ? PgnGameResult.WhiteWin : PgnGameResult.BlackWin;
-                _legalMoves.Clear();
-                StatusMessage = "Human scum, you are no match for Chessica";
-                return;
-            }
+            GameOver(isCheckmate: inCheck);
         }
-        else if (numLegalMoves == 0)
+        else
         {
-            _pgnResult = PgnGameResult.Draw;
-            _legalMoves.Clear();
-            StatusMessage = "Looks a bit stale to me, mate";
-            return;
+            _legalMoves = _boardState.GetLegalMoves().ToList();
+            StatusMessage = $"Last engine move: {pgnSpec}";
         }
-        _legalMoves = _boardState.GetLegalMoves().ToList();
-        StatusMessage = $"Last engine move: {pgnSpec}";
     }
 
     public bool BoardInverted => UserSide == Side.Black;
