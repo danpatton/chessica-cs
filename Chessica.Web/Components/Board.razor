@@ -121,6 +121,7 @@
             _pgnResult = inCheck
                 ? UserSide == Side.White ? PgnGameResult.WhiteWin : PgnGameResult.BlackWin
                 : PgnGameResult.Draw;
+            _legalMoves.Clear();
             StatusMessage = inCheck
                 ? "Bloody hell mate, looks like you've got me!"
                 : "Managed to snatch a draw off you!";
@@ -143,6 +144,7 @@
             if (numLegalMoves == 0)
             {
                 _pgnResult = EngineSide == Side.White ? PgnGameResult.WhiteWin : PgnGameResult.BlackWin;
+                _legalMoves.Clear();
                 StatusMessage = "Human scum, you are no match for Chessica";
                 return;
             }
@@ -150,6 +152,7 @@
         else if (numLegalMoves == 0)
         {
             _pgnResult = PgnGameResult.Draw;
+            _legalMoves.Clear();
             StatusMessage = "Looks a bit stale to me, mate";
             return;
         }
