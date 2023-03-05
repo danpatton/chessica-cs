@@ -79,7 +79,7 @@
         var lastMove = _pgnMoves.Pop();
         if (lastMove.Side == EngineSide)
         {
-    // also pop user's last move
+            // also pop user's last move
             _boardState.TryPop();
             _pgnMoves.Pop();
         }
