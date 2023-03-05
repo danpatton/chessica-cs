@@ -2,11 +2,23 @@
 
 namespace Chessica.Search;
 
-public static class MiniMaxSearch
+public class MiniMaxSearch
 {
-    public static Move GetBestMove(BoardState board, int depth)
+    private readonly int _maxDepth;
+    private readonly Dictionary<long, double>[] _transpositionTables;
+
+    public int CacheHits { get; private set; }
+    public int CacheMisses { get; private set; }
+
+    public MiniMaxSearch(int maxDepth)
     {
-        if (!TryGetBestMove(board, depth, out var bestMove))
+        _maxDepth = maxDepth;
+        _transpositionTables = Enumerable.Range(0, maxDepth).Select(_ => new Dictionary<long, double>()).ToArray();
+    }
+
+    public Move GetBestMove(BoardState board)
+    {
+        if (!TryGetBestMove(board, out var bestMove))
         {
             throw new Exception("No legal moves!");
         }
@@ -14,7 +26,7 @@ public static class MiniMaxSearch
         return bestMove!;
     }
 
-    public static bool TryGetBestMove(BoardState board, int depth, out Move? bestMove)
+    public bool TryGetBestMove(BoardState board, out Move? bestMove)
     {
         var legalMoves = board.GetLegalMoves().ToList();
         if (!legalMoves.Any())
@@ -28,13 +40,13 @@ public static class MiniMaxSearch
             : legalMoves.OrderBy(move => GetScoreToDepth(board, 2, move) - move.PositionalNudge(board));
 
         bestMove = board.SideToMove == Side.White
-            ? orderedLegalMoves.MaxBy(move => GetScoreToDepth(board, depth, move, double.MinValue, double.MaxValue) + move.PositionalNudge(board))
-            : orderedLegalMoves.MinBy(move => GetScoreToDepth(board, depth, move, double.MinValue, double.MaxValue) - move.PositionalNudge(board));
+            ? orderedLegalMoves.MaxBy(move => GetScoreToDepth(board, _maxDepth, move, double.MinValue, double.MaxValue) + move.PositionalNudge(board))
+            : orderedLegalMoves.MinBy(move => GetScoreToDepth(board, _maxDepth, move, double.MinValue, double.MaxValue) - move.PositionalNudge(board));
 
         return true;
     }
 
-    private static double GetScoreToDepth(BoardState board, int depth, Move initialMove)
+    private double GetScoreToDepth(BoardState board, int depth, Move initialMove)
     {
         var initialSideToMove = board.SideToMove;
         using (board.Push(initialMove))
@@ -43,6 +55,15 @@ public static class MiniMaxSearch
             {
                 return board.GetScore();
             }
+
+            var tt = _transpositionTables[depth - 1];
+            if (tt.TryGetValue(board.HashValue, out var cachedScore))
+            {
+                ++CacheHits;
+                return cachedScore;
+            }
+
+            ++CacheMisses;
 
             var legalMoves = board.GetLegalMoves().ToList();
             if (legalMoves.Count == 0)
@@ -52,13 +73,17 @@ public static class MiniMaxSearch
                     : 0.0;
             }
 
-            return board.SideToMove == Side.White
+            var score = board.SideToMove == Side.White
                 ? legalMoves.Max(move => GetScoreToDepth(board, depth - 1, move) + move.PositionalNudge(board))
                 : legalMoves.Min(move => GetScoreToDepth(board, depth - 1, move) - move.PositionalNudge(board));
+
+            tt.Add(board.HashValue, score);
+
+            return score;
         }
     }
 
-    private static double GetScoreToDepth(BoardState board, int depth, Move initialMove, double alpha, double beta)
+    private double GetScoreToDepth(BoardState board, int depth, Move initialMove, double alpha, double beta)
     {
         var initialSideToMove = board.SideToMove;
         using (board.Push(initialMove))
@@ -67,6 +92,15 @@ public static class MiniMaxSearch
             {
                 return board.GetScore();
             }
+
+            var tt = _transpositionTables[depth - 1];
+            if (tt.TryGetValue(board.HashValue, out var cachedScore))
+            {
+                ++CacheHits;
+                return cachedScore;
+            }
+
+            ++CacheMisses;
 
             var legalMoves = board.GetLegalMoves().ToList();
             if (legalMoves.Count == 0)
@@ -89,6 +123,7 @@ public static class MiniMaxSearch
                     }
                 }
 
+                tt.Add(board.HashValue, bestScore);
                 return bestScore;
             }
             else
@@ -104,6 +139,7 @@ public static class MiniMaxSearch
                     }
                 }
 
+                tt.Add(board.HashValue, bestScore);
                 return bestScore;
             }
         }

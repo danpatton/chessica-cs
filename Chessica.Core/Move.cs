@@ -71,6 +71,7 @@ public class Move
             enemySide.UndoCapture(capturedPiece, squareOfCapturedPiece);
         });
         moveUndoInfo.OwnSideEnPassantSquare.Match(ownSide.SetEnPassantSquare, ownSide.ClearEnPassantSquare);
+        moveUndoInfo.EnemySideEnPassantSquare.Match(enemySide.SetEnPassantSquare, enemySide.ClearEnPassantSquare);
         ownSide.SetCastlingRights(moveUndoInfo.OwnSideCanCastleLong, moveUndoInfo.OwnSideCanCastleShort);
         enemySide.SetCastlingRights(moveUndoInfo.EnemySideCanCastleLong, moveUndoInfo.EnemySideCanCastleShort);
     }
@@ -253,7 +254,6 @@ public class PromotionMove : Move
             halfMoveClock);
 
         ownSide.ClearEnPassantSquare();
-        ownSide.Pawns &= ~(BitBoard)From;
         ownSide.ApplyPromotion(From, To, Promotion);
         if (IsCapture)
         {
@@ -271,6 +271,7 @@ public class PromotionMove : Move
             enemySide.UndoCapture(capturedPiece, To);
         });
         moveUndoInfo.OwnSideEnPassantSquare.Match(ownSide.SetEnPassantSquare, ownSide.ClearEnPassantSquare);
+        moveUndoInfo.EnemySideEnPassantSquare.Match(enemySide.SetEnPassantSquare, enemySide.ClearEnPassantSquare);
         ownSide.SetCastlingRights(moveUndoInfo.OwnSideCanCastleLong, moveUndoInfo.OwnSideCanCastleShort);
         enemySide.SetCastlingRights(moveUndoInfo.EnemySideCanCastleLong, moveUndoInfo.EnemySideCanCastleShort);
     }

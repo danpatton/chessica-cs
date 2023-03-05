@@ -12,8 +12,8 @@ public class BoardState
     private Option<List<Move>> _cachedLegalMoves;
     private Option<BitBoard> _cachedPassedPawns;
 
-    private readonly SideState _whiteState;
-    private readonly SideState _blackState;
+    public SideState WhiteState { get; }
+    public SideState BlackState { get; }
 
     public int HalfMoveClock { get; private set; }
 
@@ -23,8 +23,8 @@ public class BoardState
 
     public BoardState(SideState whiteState, SideState blackState, Side sideToMove, int halfMoveClock = 0, int fullMoveNumber = 1)
     {
-        _whiteState = whiteState;
-        _blackState = blackState;
+        WhiteState = whiteState;
+        BlackState = blackState;
         SideToMove = sideToMove;
         HalfMoveClock = halfMoveClock;
         FullMoveNumber = fullMoveNumber;
@@ -32,7 +32,7 @@ public class BoardState
 
     public BoardState Clone()
     {
-        return new BoardState(_whiteState.Clone(), _blackState.Clone(), SideToMove, HalfMoveClock, FullMoveNumber);
+        return new BoardState(WhiteState.Clone(), BlackState.Clone(), SideToMove, HalfMoveClock, FullMoveNumber);
     }
 
     private readonly Regex _castlingMoveRegex = new("([Oo0](-[Oo0]){1,2})[+#]?");
@@ -42,7 +42,7 @@ public class BoardState
     public double GetScore()
     {
         // TODO: improve on this!
-        return _whiteState.GetSimpleMaterialScore() - _blackState.GetSimpleMaterialScore();
+        return WhiteState.GetSimpleMaterialScore() - BlackState.GetSimpleMaterialScore();
     }
 
     public Move ToMove(string moveSpec)
@@ -238,8 +238,8 @@ public class BoardState
             legalMoves => legalMoves,
             () =>
             {
-                var ownSide = SideToMove == Side.White ? _whiteState : _blackState;
-                var enemySide = SideToMove == Side.White ? _blackState : _whiteState;
+                var ownSide = SideToMove == Side.White ? WhiteState : BlackState;
+                var enemySide = SideToMove == Side.White ? BlackState : WhiteState;
                 var legalMoves = MoveCalculator.CalculateMoves(ownSide, enemySide, out _).ToList();
                 _cachedLegalMoves = Option.Some(legalMoves);
                 return legalMoves;
@@ -248,37 +248,37 @@ public class BoardState
 
     public IEnumerable<Move> GetPseudoLegalMoves()
     {
-        var ownSide = SideToMove == Side.White ? _whiteState : _blackState;
-        var enemySide = SideToMove == Side.White ? _blackState : _whiteState;
+        var ownSide = SideToMove == Side.White ? WhiteState : BlackState;
+        var enemySide = SideToMove == Side.White ? BlackState : WhiteState;
         return MoveCalculator.CalculatePseudoLegalMoves(ownSide, enemySide);
     }
 
     public (bool InCheck, int NumLegalMoves) GetGameState()
     {
-        var ownSide = SideToMove == Side.White ? _whiteState : _blackState;
-        var enemySide = SideToMove == Side.White ? _blackState : _whiteState;
+        var ownSide = SideToMove == Side.White ? WhiteState : BlackState;
+        var enemySide = SideToMove == Side.White ? BlackState : WhiteState;
         var legalMoves = MoveCalculator.CalculateMoves(ownSide, enemySide, out var inCheck);
         return (inCheck, legalMoves.Count());
     }
 
     public bool HasKing()
     {
-        var ownSide = SideToMove == Side.White ? _whiteState : _blackState;
+        var ownSide = SideToMove == Side.White ? WhiteState : BlackState;
         return ownSide.King != 0;
     }
 
     public bool IsCheckmate()
     {
-        var ownSide = SideToMove == Side.White ? _whiteState : _blackState;
-        var enemySide = SideToMove == Side.White ? _blackState : _whiteState;
+        var ownSide = SideToMove == Side.White ? WhiteState : BlackState;
+        var enemySide = SideToMove == Side.White ? BlackState : WhiteState;
         var legalMoves = MoveCalculator.CalculateMoves(ownSide, enemySide, out var inCheck);
         return inCheck && !legalMoves.Any();
     }
 
     public bool IsStalemate()
     {
-        var ownSide = SideToMove == Side.White ? _whiteState : _blackState;
-        var enemySide = SideToMove == Side.White ? _blackState : _whiteState;
+        var ownSide = SideToMove == Side.White ? WhiteState : BlackState;
+        var enemySide = SideToMove == Side.White ? BlackState : WhiteState;
         var legalMoves = MoveCalculator.CalculateMoves(ownSide, enemySide, out var inCheck);
         return !inCheck && !legalMoves.Any();
     }
@@ -286,12 +286,14 @@ public class BoardState
     private class MovePopper : IDisposable
     {
         private readonly BoardState _board;
+        private readonly long _initialBoardHash;
         private readonly Move _move;
         private readonly MoveUndoInfo _moveUndoInfo;
 
-        public MovePopper(BoardState board)
+        public MovePopper(BoardState board, long initialBoardHash)
         {
             _board = board;
+            _initialBoardHash = initialBoardHash;
             var (move, moveUndoInfo) = board._moveStack.Peek();
             _move = move;
             _moveUndoInfo = moveUndoInfo;
@@ -299,23 +301,36 @@ public class BoardState
 
         public void Dispose()
         {
-            if (_board._moveStack.TryPeek(out var t))
+            if (!_board._moveStack.TryPeek(out var t))
             {
-                var (move, moveUndoInfo) = t;
-                if (!move.Equals(_move) || !moveUndoInfo.Equals(_moveUndoInfo))
-                {
-                    throw new Exception("WTF");
-                }
+                throw new Exception("WTF");
+            }
+
+            var (move, moveUndoInfo) = t;
+            if (!move.Equals(_move) || !moveUndoInfo.Equals(_moveUndoInfo))
+            {
+                throw new Exception("WTF");
             }
             _board.TryPop();
+            if (_board.HashValue != _initialBoardHash)
+            {
+                throw new Exception("WTF");
+            }
         }
+    }
+
+    public IDisposable Push(string moveSpec)
+    {
+        return Push(ToMove(moveSpec));
     }
 
     public IDisposable Push(Move move)
     {
-        var ownSide = SideToMove == Side.White ? _whiteState : _blackState;
-        var enemySide = SideToMove == Side.White ? _blackState : _whiteState;
+        var initialBoardHash = HashValue;
+        var ownSide = SideToMove == Side.White ? WhiteState : BlackState;
+        var enemySide = SideToMove == Side.White ? BlackState : WhiteState;
         var moveUndoInfo = move.Apply(ownSide, enemySide, HalfMoveClock);
+        enemySide.ClearEnPassantSquare();
         SideToMove = SideToMove == Side.White ? Side.Black : Side.White;
         if (move.Piece == Piece.Pawn || move.IsCapture)
         {
@@ -336,7 +351,7 @@ public class BoardState
         // mutated board state --> invalidate caches
         InvalidateCaches();
 
-        return new MovePopper(this);
+        return new MovePopper(this, initialBoardHash);
     }
 
     public bool TryPop()
@@ -344,8 +359,8 @@ public class BoardState
         if (_moveStack.TryPop(out var t))
         {
             var (move, moveUndoInfo) = t;
-            var ownSide = SideToMove == Side.White ? _blackState : _whiteState;
-            var enemySide = SideToMove == Side.White ? _whiteState : _blackState;
+            var ownSide = SideToMove == Side.White ? BlackState : WhiteState;
+            var enemySide = SideToMove == Side.White ? WhiteState : BlackState;
             move.Undo(ownSide, enemySide, moveUndoInfo);
             SideToMove = SideToMove == Side.White ? Side.Black : Side.White;
             HalfMoveClock = moveUndoInfo.HalfMoveClock;
@@ -378,8 +393,8 @@ public class BoardState
             for (var file = 0; file < 8; ++file)
             {
                 var coord = new Coord { File = file, Rank = rank };
-                var whitePiece = _whiteState.GetPiece(coord);
-                var blackPiece = _blackState.GetPiece(coord);
+                var whitePiece = WhiteState.GetPiece(coord);
+                var blackPiece = BlackState.GetPiece(coord);
                 Debug.Assert(!whitePiece.HasValue || !blackPiece.HasValue, $"Both sides occupying {coord} !?");
                 if (!whitePiece.HasValue && !blackPiece.HasValue)
                 {
@@ -407,33 +422,33 @@ public class BoardState
         }
 
         sb.Append(SideToMove == Side.White ? " w " : " b ");
-        if (!_whiteState.CanCastle && !_blackState.CanCastle)
+        if (!WhiteState.CanCastle && !BlackState.CanCastle)
         {
             sb.Append("-");
         }
         else
         {
-            if (_whiteState.CanCastleShort)
+            if (WhiteState.CanCastleShort)
             {
                 sb.Append('K');
             }
-            if (_whiteState.CanCastleLong)
+            if (WhiteState.CanCastleLong)
             {
                 sb.Append('Q');
             }
-            if (_blackState.CanCastleShort)
+            if (BlackState.CanCastleShort)
             {
                 sb.Append('k');
             }
-            if (_blackState.CanCastleLong)
+            if (BlackState.CanCastleLong)
             {
                 sb.Append('q');
             }
         }
 
         var enPassantSquare = SideToMove == Side.White
-            ? _blackState.EnPassantSquare
-            : _whiteState.EnPassantSquare;
+            ? BlackState.EnPassantSquare
+            : WhiteState.EnPassantSquare;
         sb.Append(enPassantSquare.Match(s => $" {s}", () => " -"));
 
         if (includeMoveClocks)
@@ -446,11 +461,11 @@ public class BoardState
 
     public IEnumerable<(Side Side, Piece Piece, Coord Coord)> GetAllPieces()
     {
-        foreach (var (whitePiece, whitePieceCoord) in _whiteState.GetPieces())
+        foreach (var (whitePiece, whitePieceCoord) in WhiteState.GetPieces())
         {
             yield return (Side.White, whitePiece, whitePieceCoord);
         }
-        foreach (var (blackPiece, blackPieceCoord) in _blackState.GetPieces())
+        foreach (var (blackPiece, blackPieceCoord) in BlackState.GetPieces())
         {
             yield return (Side.Black, blackPiece, blackPieceCoord);
         }
@@ -460,14 +475,14 @@ public class BoardState
     {
         return side switch
         {
-            Side.White => _whiteState.GetPiece(coord),
-            Side.Black => _blackState.GetPiece(coord),
+            Side.White => WhiteState.GetPiece(coord),
+            Side.Black => BlackState.GetPiece(coord),
             _ => throw new ArgumentOutOfRangeException()
         };
     }
 
-    public bool IsOccupied(Coord coord) => _whiteState.AllPieces.IsOccupied(coord) ||
-                                           _blackState.AllPieces.IsOccupied(coord);
+    public bool IsOccupied(Coord coord) => WhiteState.AllPieces.IsOccupied(coord) ||
+                                           BlackState.AllPieces.IsOccupied(coord);
 
     public bool IsPassedPawn(Coord coord) => GetPassedPawns().IsOccupied(coord);
 
@@ -485,8 +500,8 @@ public class BoardState
 
     private BitBoard CalculatePassedPawns(Side side)
     {
-        var ownSide = side == Side.White ? _whiteState : _blackState;
-        var enemySide = side == Side.White ? _blackState : _whiteState;
+        var ownSide = side == Side.White ? WhiteState : BlackState;
+        var enemySide = side == Side.White ? BlackState : WhiteState;
         var ownPawns = ownSide.Pawns;
         var enemyPawns = enemySide.Pawns;
         BitBoard ownPassedPawns = 0;
@@ -505,13 +520,5 @@ public class BoardState
         return ownPassedPawns;
     }
 
-    public string GetBoardHash()
-    {
-        using var memoryStream = new MemoryStream();
-        using var binaryWriter = new BinaryWriter(memoryStream);
-        _whiteState.SerialiseTo(binaryWriter);
-        _blackState.SerialiseTo(binaryWriter);
-        binaryWriter.Write((int)SideToMove);
-        return Utils.Sha1Sum(memoryStream.ToArray());
-    }
+    public long HashValue => ZobristHash.Of(this);
 }
