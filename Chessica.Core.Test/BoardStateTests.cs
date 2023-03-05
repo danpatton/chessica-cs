@@ -46,6 +46,36 @@ public class BoardStateTests
         Assert.That(board.IsCheckmate);
     }
 
+    [TestCase("e4 e5 Bc4 Nc6 Nf3", "Nf3 Nc6 e4 e5 Bc4")]
+    [TestCase("e4 d5 exd5 Qxd5 Nf3 e6", "e4 d5 Nf3 e6 exd5 Qxd5")]
+    [TestCase("e4 e5 Bc4 Nc6 Nf3 Nf6 O-O", "Nf3 Nc6 e4 e5 Bc4 Nf6 O-O")]
+    public void TestTranspositionHashValue(string board1Moves, string board2Moves)
+    {
+        var board1 = BoardState.StartingPosition;
+        foreach (var move in board1Moves.Split(" "))
+        {
+            board1.Push(move);
+        }
+
+        var board2 = BoardState.StartingPosition;
+        foreach (var move in board2Moves.Split(" "))
+        {
+            board2.Push(move);
+        }
+
+        Assert.That(board1.HashValue, Is.EqualTo(board2.HashValue));
+
+        while (board1.TryPop() && board2.TryPop())
+        {
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(board1.HashValue, Is.EqualTo(BoardState.StartingPosition.HashValue));
+            Assert.That(board2.HashValue, Is.EqualTo(BoardState.StartingPosition.HashValue));
+        });
+    }
+
     [Test]
     public void TestGameFromPgn()
     {
