@@ -35,9 +35,9 @@ public class BoardState
         return new BoardState(_whiteState.Clone(), _blackState.Clone(), SideToMove, HalfMoveClock, FullMoveNumber);
     }
 
-    private readonly Regex _castlingMoveRegex = new("([Oo0](-[Oo0]){1,2})[+#]?");
-    private readonly Regex _promotionMoveRegex = new("([a-h])?(x)?([a-h][1-8])\\=([QRBN])[+#]?");
-    private readonly Regex _standardMoveRegex = new ("([KQRBN])?([a-h])?([1-8])?(x)?([a-h][1-8])[+#]?");
+    private readonly Regex _castlingMoveRegex = new("([Oo0](-[Oo0]){1,2})([+#]?)");
+    private readonly Regex _promotionMoveRegex = new("([a-h])?(x)?([a-h][1-8])\\=([QRBN])([+#]?)");
+    private readonly Regex _standardMoveRegex = new ("([KQRBN])?([a-h])?([1-8])?(x)?([a-h][1-8])([+#]?)");
 
     public double GetScore()
     {
@@ -56,7 +56,8 @@ public class BoardState
             var n = castlingMoveMatch.Groups[1].Value.Count(c => c == '-');
             var kingToFile = n == 2 ? "c" : "g";
             Coord kingTo = kingToFile + (SideToMove == Side.White ? "1" : "8");
-            var castlingMove = new CastlingMove(kingFrom, kingTo);
+            var isCheck = castlingMoveMatch.Groups[2].Length > 0;
+            var castlingMove = new CastlingMove(kingFrom, kingTo, isCheck);
             if (!legalMoves.Contains(castlingMove))
             {
                 throw new Exception($"{moveSpec} is not a legal move");
@@ -71,12 +72,13 @@ public class BoardState
             Coord to = promotionMoveMatch.Groups[3].Value;
             var promotionPiece = promotionMoveMatch.Groups[4].Value.ParsePiece();
             var isCapture = promotionMoveMatch.Groups[2].Value == "x";
+            var isCheck = castlingMoveMatch.Groups[3].Length > 0;
             var fromRank = to.Rank == 7 ? 6 : 1;
             var fromFile = string.IsNullOrEmpty(promotionMoveMatch.Groups[1].Value)
                 ? to.File
                 : promotionMoveMatch.Groups[1].Value[0] - 'a';
             var from = new Coord { File = fromFile, Rank = fromRank };
-            return new PromotionMove(from, to, isCapture, promotionPiece);
+            return new PromotionMove(from, to, promotionPiece, isCapture, isCheck);
         }
 
         var standardMoveMatch = _standardMoveRegex.Match(moveSpec);
