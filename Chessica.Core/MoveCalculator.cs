@@ -412,4 +412,48 @@ public static class MoveCalculator
 
         return attackedSquares;
     }
+
+    public static PotentialCheckMask CalculatePotentialChecks(SideState kingSide, SideState attackingSide)
+    {
+        var king = kingSide.King.Single();
+        var kingSidePieces = kingSide.AllPieces;
+        var attackingPieces = attackingSide.AllPieces;
+
+        BitBoard pawnMask = 0;
+        BitBoard bishopMask = 0;
+        BitBoard rookMask = 0;
+        var knightMask = king.KnightMovesMask();
+
+        var pawnAttackingRank = kingSide.Side == Side.White ? king.Rank + 1 : king.Rank - 1;
+        if (king.File > 0) pawnMask |= new Coord(king.File - 1, pawnAttackingRank) & attackingSide.Pawns;
+        if (king.File < 7) pawnMask |= new Coord(king.File + 1, pawnAttackingRank) & attackingSide.Pawns;
+
+        foreach (var moveSequence in king.MoveSequences(Piece.Bishop, kingSide.Side))
+        {
+            foreach (var coord in moveSequence)
+            {
+                if (attackingPieces.IsOccupied(coord)) break;
+                bishopMask |= coord;
+                if (kingSidePieces.IsOccupied(coord)) break;
+            }
+        }
+
+        foreach (var moveSequence in king.MoveSequences(Piece.Rook, kingSide.Side))
+        {
+            foreach (var coord in moveSequence)
+            {
+                if (attackingPieces.IsOccupied(coord)) break;
+                rookMask |= coord;
+                if (kingSidePieces.IsOccupied(coord)) break;
+            }
+        }
+
+        return new PotentialCheckMask
+        {
+            PawnMask = pawnMask,
+            BishopMask = bishopMask,
+            KnightMask = knightMask,
+            RookMask = rookMask
+        };
+    }
 }
