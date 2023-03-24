@@ -9,7 +9,7 @@ public class MiniMaxMoveGenerator : IMoveGenerator
 
     public MiniMaxMoveGenerator(int maxDepth)
     {
-        _search = new MiniMaxSearchV2(maxDepth);
+        _search = new MiniMaxSearchV1(maxDepth);
     }
 
     public bool TryGetBestMove(BoardState boardState, out Move? bestMove)
