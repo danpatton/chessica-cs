@@ -36,18 +36,6 @@
       <EmbeddedResource Include="Pgn\example2.fen" />
       <None Remove="Pgn\example3.fen" />
       <EmbeddedResource Include="Pgn\example3.fen" />
-      <None Remove="Pgn\twic1000.pgn" />
-      <EmbeddedResource Include="Pgn\twic1000.pgn" />
-      <None Remove="Pgn\twic1000.fen" />
-      <EmbeddedResource Include="Pgn\twic1000.fen" />
-      <None Remove="Pgn\twic1001.pgn" />
-      <EmbeddedResource Include="Pgn\twic1001.pgn" />
-      <None Remove="Pgn\twic1001.fen" />
-      <EmbeddedResource Include="Pgn\twic1001.fen" />
-      <None Remove="Pgn\twic1002.fen" />
-      <EmbeddedResource Include="Pgn\twic1002.fen" />
-      <None Remove="Pgn\twic1002.pgn" />
-      <EmbeddedResource Include="Pgn\twic1002.pgn" />
     </ItemGroup>
 
 </Project>
