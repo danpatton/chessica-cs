@@ -5,20 +5,20 @@ namespace Chessica.Uci;
 
 public class MiniMaxMoveGenerator : IMoveGenerator
 {
-    private readonly int _maxDepth;
+    private readonly ISearch _search;
 
     public MiniMaxMoveGenerator(int maxDepth)
     {
-        _maxDepth = maxDepth;
+        _search = new MiniMaxSearchV2(maxDepth);
     }
 
     public bool TryGetBestMove(BoardState boardState, out Move? bestMove)
     {
-        return MiniMaxSearch.TryGetBestMove(boardState.Clone(), _maxDepth, out bestMove);
+        return _search.TryGetBestMove(boardState.Clone(), out bestMove);
     }
 
     public Move GetBestMove(BoardState boardState)
     {
-        return MiniMaxSearch.GetBestMove(boardState.Clone(), _maxDepth);
+        return _search.GetBestMove(boardState.Clone());
     }
 }

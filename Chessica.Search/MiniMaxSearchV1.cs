@@ -2,11 +2,18 @@
 
 namespace Chessica.Search;
 
-public static class MiniMaxSearch
+public class MiniMaxSearchV1 : ISearch
 {
-    public static Move GetBestMove(BoardState board, int depth)
+    private readonly int _maxDepth;
+
+    public MiniMaxSearchV1(int maxDepth)
     {
-        if (!TryGetBestMove(board, depth, out var bestMove))
+        _maxDepth = maxDepth;
+    }
+
+    public Move GetBestMove(BoardState board)
+    {
+        if (!TryGetBestMove(board, out var bestMove))
         {
             throw new Exception("No legal moves!");
         }
@@ -14,7 +21,7 @@ public static class MiniMaxSearch
         return bestMove!;
     }
 
-    public static bool TryGetBestMove(BoardState board, int depth, out Move? bestMove)
+    public bool TryGetBestMove(BoardState board, out Move? bestMove)
     {
         var legalMoves = board.GetLegalMoves().ToList();
         if (!legalMoves.Any())
@@ -28,8 +35,8 @@ public static class MiniMaxSearch
             : legalMoves.OrderBy(move => GetScoreToDepth(board, 2, move) - move.PositionalNudge(board));
 
         bestMove = board.SideToMove == Side.White
-            ? orderedLegalMoves.MaxBy(move => GetScoreToDepth(board, depth, move, double.MinValue, double.MaxValue) + move.PositionalNudge(board))
-            : orderedLegalMoves.MinBy(move => GetScoreToDepth(board, depth, move, double.MinValue, double.MaxValue) - move.PositionalNudge(board));
+            ? orderedLegalMoves.MaxBy(move => GetScoreToDepth(board, _maxDepth, move, double.MinValue, double.MaxValue) + move.PositionalNudge(board))
+            : orderedLegalMoves.MinBy(move => GetScoreToDepth(board, _maxDepth, move, double.MinValue, double.MaxValue) - move.PositionalNudge(board));
 
         return true;
     }
