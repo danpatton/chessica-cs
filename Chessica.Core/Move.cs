@@ -8,13 +8,15 @@ public class Move
     public Coord From { get; }
     public Coord To { get; }
     public bool IsCapture { get; }
+    public bool IsCheck { get; }
 
-    public Move(Piece piece, Coord from, Coord to, bool isCapture = false)
+    public Move(Piece piece, Coord from, Coord to, bool isCapture = false, bool isCheck = false)
     {
         Piece = piece;
         From = from;
         To = to;
         IsCapture = isCapture;
+        IsCheck = isCheck;
     }
 
     public virtual MoveUndoInfo Apply(SideState ownSide, SideState enemySide, int halfMoveClock)
@@ -178,8 +180,8 @@ public class Move
 
 public class CastlingMove : Move
 {
-    public CastlingMove(Coord from, Coord to)
-        : base(Piece.King, from, to)
+    public CastlingMove(Coord from, Coord to, bool isCheck = false)
+        : base(Piece.King, from, to, false, isCheck)
     {
     }
 
@@ -189,7 +191,7 @@ public class CastlingMove : Move
         {
             var rookFrom = To.File == 6 ? From with { File = 7 } : From with { File = 0 };
             var rookTo = To.File == 6 ? From with { File = 5 } : From with { File = 3 };
-            return new Move(Piece.Rook, rookFrom, rookTo);
+            return new Move(Piece.Rook, rookFrom, rookTo, false, IsCheck);
         }
     }
 
@@ -235,8 +237,8 @@ public class PromotionMove : Move
 {
     public Piece Promotion { get; }
 
-    public PromotionMove(Coord from, Coord to, bool isCapture, Piece promotion)
-        : base(Piece.Pawn, from, to, isCapture)
+    public PromotionMove(Coord from, Coord to, Piece promotion, bool isCapture, bool isCheck = false)
+        : base(Piece.Pawn, from, to, isCapture, isCheck)
     {
         Promotion = promotion;
     }

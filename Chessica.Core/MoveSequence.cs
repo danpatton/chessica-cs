@@ -98,6 +98,34 @@ public static class MoveSequence
         }
     }
 
+    public static BitBoard KnightMovesMask(this Coord origin)
+    {
+        BitBoard knightMoves = 0;
+
+        if (origin.File > 0)
+        {
+            if (origin.Rank > 1) knightMoves |= new Coord { File = origin.File - 1, Rank = origin.Rank - 2};
+            if (origin.Rank < 6) knightMoves |= new Coord { File = origin.File - 1, Rank = origin.Rank + 2};
+        }
+        if (origin.File > 1)
+        {
+            if (origin.Rank > 0) knightMoves |= new Coord { File = origin.File - 2, Rank = origin.Rank - 1};
+            if (origin.Rank < 7) knightMoves |= new Coord { File = origin.File - 2, Rank = origin.Rank + 1};
+        }
+        if (origin.File < 6)
+        {
+            if (origin.Rank > 0) knightMoves |= new Coord { File = origin.File + 2, Rank = origin.Rank - 1};
+            if (origin.Rank < 7) knightMoves |= new Coord { File = origin.File + 2, Rank = origin.Rank + 1};
+        }
+        if (origin.File < 7)
+        {
+            if (origin.Rank > 1) knightMoves |= new Coord { File = origin.File + 1, Rank = origin.Rank - 2};
+            if (origin.Rank < 6) knightMoves |= new Coord { File = origin.File + 1, Rank = origin.Rank + 2};
+        }
+
+        return knightMoves;
+    }
+
     private static IEnumerable<IReadOnlyList<Coord>> RookMoveSequences(this Coord origin)
     {
         var n = new List<Coord>();

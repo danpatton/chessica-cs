@@ -1,8 +1,8 @@
-﻿using Chessica.Core;
+using Chessica.Core;
 
 namespace Chessica.Search;
 
-public class MiniMaxSearch
+public class MiniMaxSearchV1 : ISearch
 {
     private readonly int _maxDepth;
     private readonly Dictionary<long, double>[] _transpositionTables;
@@ -10,7 +10,7 @@ public class MiniMaxSearch
     public int CacheHits { get; private set; }
     public int CacheMisses { get; private set; }
 
-    public MiniMaxSearch(int maxDepth)
+    public MiniMaxSearchV1(int maxDepth)
     {
         _maxDepth = maxDepth;
         _transpositionTables = Enumerable.Range(0, maxDepth).Select(_ => new Dictionary<long, double>()).ToArray();

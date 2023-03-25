@@ -100,7 +100,7 @@ public class UciProcessor
                     if (moveStr.Length > 4)
                     {
                         var (promotion, _) = moveStr[4].ParseFenChar();
-                        _boardState.Push(new PromotionMove(from, to, from.File != to.File, promotion));
+                        _boardState.Push(new PromotionMove(from, to, promotion, from.File != to.File));
                     }
                     else
                     {

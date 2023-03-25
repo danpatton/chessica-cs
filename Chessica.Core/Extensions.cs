@@ -146,8 +146,18 @@ public static class Extensions
     {
         return side switch
         {
-            Side.White => double.MaxValue,
-            Side.Black => double.MinValue,
+            Side.White => double.PositiveInfinity,
+            Side.Black => double.NegativeInfinity,
+            _ => throw new ArgumentOutOfRangeException()
+        };
+    }
+
+    public static double LossScore(this Side side)
+    {
+        return side switch
+        {
+            Side.White => double.NegativeInfinity,
+            Side.Black => double.PositiveInfinity,
             _ => throw new ArgumentOutOfRangeException()
         };
     }
