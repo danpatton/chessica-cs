@@ -1,24 +1,24 @@
-﻿using Chessica.Core;
+using Chessica.Core;
 using Chessica.Search;
 
 namespace Chessica.Uci;
 
 public class MiniMaxMoveGenerator : IMoveGenerator
 {
-    private readonly ISearch _search;
+    public ISearch Search { get; }
 
     public MiniMaxMoveGenerator(int maxDepth)
     {
-        _search = new MiniMaxSearchV1(maxDepth);
+        Search = new MiniMaxSearchV1(maxDepth);
     }
 
     public bool TryGetBestMove(BoardState boardState, out Move? bestMove)
     {
-        return _search.TryGetBestMove(boardState.Clone(), out bestMove);
+        return Search.TryGetBestMove(boardState.Clone(), out bestMove);
     }
 
     public Move GetBestMove(BoardState boardState)
     {
-        return _search.GetBestMove(boardState.Clone());
+        return Search.GetBestMove(boardState.Clone());
     }
 }

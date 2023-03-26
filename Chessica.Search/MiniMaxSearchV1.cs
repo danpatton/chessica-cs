@@ -1,14 +1,19 @@
-﻿using Chessica.Core;
+using Chessica.Core;
 
 namespace Chessica.Search;
 
 public class MiniMaxSearchV1 : ISearch
 {
     private readonly int _maxDepth;
+    private readonly Dictionary<long, double>[] _transpositionTables;
+
+    public int CacheHits { get; private set; }
+    public int CacheMisses { get; private set; }
 
     public MiniMaxSearchV1(int maxDepth)
     {
         _maxDepth = maxDepth;
+        _transpositionTables = Enumerable.Range(0, maxDepth).Select(_ => new Dictionary<long, double>()).ToArray();
     }
 
     public Move GetBestMove(BoardState board)
@@ -41,7 +46,7 @@ public class MiniMaxSearchV1 : ISearch
         return true;
     }
 
-    private static double GetScoreToDepth(BoardState board, int depth, Move initialMove)
+    private double GetScoreToDepth(BoardState board, int depth, Move initialMove)
     {
         var initialSideToMove = board.SideToMove;
         using (board.Push(initialMove))
@@ -50,6 +55,15 @@ public class MiniMaxSearchV1 : ISearch
             {
                 return board.GetScore();
             }
+
+            var tt = _transpositionTables[depth - 1];
+            if (tt.TryGetValue(board.HashValue, out var cachedScore))
+            {
+                ++CacheHits;
+                return cachedScore;
+            }
+
+            ++CacheMisses;
 
             var legalMoves = board.GetLegalMoves().ToList();
             if (legalMoves.Count == 0)
@@ -59,13 +73,17 @@ public class MiniMaxSearchV1 : ISearch
                     : 0.0;
             }
 
-            return board.SideToMove == Side.White
+            var score = board.SideToMove == Side.White
                 ? legalMoves.Max(move => GetScoreToDepth(board, depth - 1, move) + move.PositionalNudge(board))
                 : legalMoves.Min(move => GetScoreToDepth(board, depth - 1, move) - move.PositionalNudge(board));
+
+            tt.Add(board.HashValue, score);
+
+            return score;
         }
     }
 
-    private static double GetScoreToDepth(BoardState board, int depth, Move initialMove, double alpha, double beta)
+    private double GetScoreToDepth(BoardState board, int depth, Move initialMove, double alpha, double beta)
     {
         var initialSideToMove = board.SideToMove;
         using (board.Push(initialMove))
@@ -74,6 +92,15 @@ public class MiniMaxSearchV1 : ISearch
             {
                 return board.GetScore();
             }
+
+            var tt = _transpositionTables[depth - 1];
+            if (tt.TryGetValue(board.HashValue, out var cachedScore))
+            {
+                ++CacheHits;
+                return cachedScore;
+            }
+
+            ++CacheMisses;
 
             var legalMoves = board.GetLegalMoves().ToList();
             if (legalMoves.Count == 0)
@@ -96,6 +123,7 @@ public class MiniMaxSearchV1 : ISearch
                     }
                 }
 
+                tt.Add(board.HashValue, bestScore);
                 return bestScore;
             }
             else
@@ -111,6 +139,7 @@ public class MiniMaxSearchV1 : ISearch
                     }
                 }
 
+                tt.Add(board.HashValue, bestScore);
                 return bestScore;
             }
         }

@@ -184,7 +184,8 @@ public class BoardViewModel : INotifyPropertyChanged
     public void MakeEngineMove()
     {
         StatusMessage = "Thinking...";
-        Task.Run(() => new MiniMaxMoveGenerator(4).GetBestMove(_boardState)).ContinueWith(t =>
+        var moveGenerator = new MiniMaxMoveGenerator(4);
+        Task.Run(() => moveGenerator.GetBestMove(_boardState)).ContinueWith(t =>
         {
             var engineMove = t.Result;
             var moveSpec = engineMove.ToPgnSpec(_boardState);
@@ -197,7 +198,7 @@ public class BoardViewModel : INotifyPropertyChanged
             }
 
             _pgnMoves.Add(new PgnMove(EngineSide, moveSpec));
-            StatusMessage = $"Last engine move: {moveSpec}";
+            StatusMessage = $"Last engine move: {moveSpec} (cache hits: {moveGenerator.Search.CacheHits}; cache misses: {moveGenerator.Search.CacheMisses})";
             if (numLegalMoves == 0)
             {
                 var messageBoxText = inCheck

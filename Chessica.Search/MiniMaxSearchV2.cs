@@ -11,6 +11,10 @@ public class MiniMaxSearchV2 : ISearch
         _maxDepth = maxDepth;
     }
 
+    public int CacheHits => 0;
+
+    public int CacheMisses => 0;
+
     public Move GetBestMove(BoardState board)
     {
         if (!TryGetBestMove(board, out var bestMove))
