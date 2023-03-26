@@ -14,10 +14,40 @@ public class SideState
     public BitBoard Bishops;
     public BitBoard Pawns;
 
-    public bool CanCastleLong { get; private set; }
-    public bool CanCastleShort { get; private set; }
+    private bool _canCastleLong;
+    public bool CanCastleLong
+    {
+        get => _canCastleLong;
+        private set
+        {
+            if (value != _canCastleLong)
+            {
+                _hash.FlipLongCastling(Side);
+            }
+
+            _canCastleLong = value;
+        }
+    }
+
+    private bool _canCastleShort;
+
+    public bool CanCastleShort
+    {
+        get => _canCastleShort;
+        private set
+        {
+            if (value != _canCastleShort)
+            {
+                _hash.FlipShortCastling(Side);
+            }
+
+            _canCastleShort = value;
+        }
+    }
 
     private Option<Coord> _enPassantSquare = Option.None<Coord>();
+
+    private readonly ZobristHash _hash = new();
 
     public SideState(Side side, bool canCastleLong = true, bool canCastleShort = true)
     {
@@ -38,8 +68,11 @@ public class SideState
             Pawns = Pawns
         };
         _enPassantSquare.MatchSome(clone.SetEnPassantSquare);
+        clone._hash.SetFrom(_hash);
         return clone;
     }
+
+    public long HashValue => _hash.Value;
 
     public bool CanCastle => CanCastleLong || CanCastleShort;
 
@@ -47,17 +80,20 @@ public class SideState
 
     public void SetEnPassantSquare(Coord coord)
     {
+        _enPassantSquare.MatchSome(oldCoord => _hash.FlipEnPassantFile(oldCoord.File));
         _enPassantSquare = Option.Some(coord);
+        _hash.FlipEnPassantFile(coord.File);
     }
 
     public Option<Coord> EnPassantSquare => _enPassantSquare;
 
     public void ClearEnPassantSquare()
     {
-        if (_enPassantSquare.HasValue)
+        _enPassantSquare.MatchSome(c =>
         {
+            _hash.FlipEnPassantFile(c.File);
             _enPassantSquare = Option.None<Coord>();
-        }
+        });
     }
 
     public void SetCastlingRights(bool canCastleLong, bool canCastleShort)
@@ -82,14 +118,17 @@ public class SideState
         {
             case Piece.King:
                 King.Move(from, to);
+                _hash.MovePiece(Side, Piece.King, from, to);
                 CanCastleShort = false;
                 CanCastleLong = false;
                 break;
             case Piece.Queen:
                 Queens.Move(from, to);
+                _hash.MovePiece(Side, Piece.Queen, from, to);
                 break;
             case Piece.Rook:
                 Rooks.Move(from, to);
+                _hash.MovePiece(Side, Piece.Rook, from, to);
                 var startingRank = Side == Side.White ? 0 : 7;
                 if (from.Rank == startingRank)
                 {
@@ -106,12 +145,15 @@ public class SideState
                 break;
             case Piece.Knight:
                 Knights.Move(from, to);
+                _hash.MovePiece(Side, Piece.Knight, from, to);
                 break;
             case Piece.Bishop:
                 Bishops.Move(from, to);
+                _hash.MovePiece(Side, Piece.Bishop, from, to);
                 break;
             case Piece.Pawn:
                 Pawns.Move(from, to);
+                _hash.MovePiece(Side, Piece.Pawn, from, to);
                 break;
             default:
                 throw new ArgumentOutOfRangeException();
@@ -124,21 +166,27 @@ public class SideState
         {
             case Piece.King:
                 King.Move(to, from);
+                _hash.MovePiece(Side, Piece.King, to, from);
                 break;
             case Piece.Queen:
                 Queens.Move(to, from);
+                _hash.MovePiece(Side, Piece.Queen, to, from);
                 break;
             case Piece.Rook:
                 Rooks.Move(to, from);
+                _hash.MovePiece(Side, Piece.Rook, to, from);
                 break;
             case Piece.Knight:
                 Knights.Move(to, from);
+                _hash.MovePiece(Side, Piece.Knight, to, from);
                 break;
             case Piece.Bishop:
                 Bishops.Move(to, from);
+                _hash.MovePiece(Side, Piece.Bishop, to, from);
                 break;
             case Piece.Pawn:
                 Pawns.Move(to, from);
+                _hash.MovePiece(Side, Piece.Pawn, to, from);
                 break;
             default:
                 throw new ArgumentOutOfRangeException();
@@ -147,46 +195,14 @@ public class SideState
 
     public void ApplyPromotion(Coord from, Coord to, Piece promotion)
     {
-        Pawns &= ~(BitBoard)from;
-        switch (promotion)
-        {
-            case Piece.Queen:
-                Queens |= to;
-                break;
-            case Piece.Rook:
-                Rooks |= to;
-                break;
-            case Piece.Knight:
-                Knights |= to;
-                break;
-            case Piece.Bishop:
-                Bishops |= to;
-                break;
-            default:
-                throw new ArgumentOutOfRangeException();
-        }
+        RemovePiece(Piece.Pawn, from);
+        AddPiece(promotion, to);
     }
 
     public void UndoPromotion(Coord from, Coord to, Piece promotion)
     {
-        Pawns |= from;
-        switch (promotion)
-        {
-            case Piece.Queen:
-                Queens &= ~(BitBoard)to;
-                break;
-            case Piece.Rook:
-                Rooks &= ~(BitBoard)to;
-                break;
-            case Piece.Knight:
-                Knights &= ~(BitBoard)to;
-                break;
-            case Piece.Bishop:
-                Bishops &= ~(BitBoard)to;
-                break;
-            default:
-                throw new ArgumentOutOfRangeException();
-        }
+        RemovePiece(promotion, to);
+        AddPiece(Piece.Pawn, from);
     }
 
     public void ApplyCapture(Coord coord)
@@ -204,49 +220,44 @@ public class SideState
                     break;
             }
         }
-        // allow king to be "captured" during search (this should never happen as part of game play)
-        King &= ~(BitBoard)coord;
-        // TODO: better accounting
-        Queens &= ~(BitBoard)coord;
-        Rooks &= ~(BitBoard)coord;
-        Knights &= ~(BitBoard)coord;
-        Bishops &= ~(BitBoard)coord;
-        Pawns &= ~(BitBoard)coord;
+
+        if (Pawns.IsOccupied(coord))
+        {
+            RemovePiece(Piece.Pawn, coord);
+        }
+        else if (Bishops.IsOccupied(coord))
+        {
+            RemovePiece(Piece.Bishop, coord);
+        }
+        else if (Knights.IsOccupied(coord))
+        {
+            RemovePiece(Piece.Knight, coord);
+        }
+        else if (Rooks.IsOccupied(coord))
+        {
+            RemovePiece(Piece.Rook, coord);
+        }
+        else if (Queens.IsOccupied(coord))
+        {
+            RemovePiece(Piece.Queen, coord);
+        }
+        else if (King.IsOccupied(coord))
+        {
+            // allow king to be "captured" during search (this should never happen as part of game play)
+            RemovePiece(Piece.King, coord);
+        }
     }
 
     public void UndoCapture(Piece piece, Coord coord)
     {
-        switch (piece)
-        {
-            case Piece.Pawn:
-                Pawns |= coord;
-                break;
-            case Piece.Bishop:
-                Bishops |= coord;
-                break;
-            case Piece.Knight:
-                Knights |= coord;
-                break;
-            case Piece.Rook:
-                Rooks |= coord;
-                break;
-            case Piece.Queen:
-                Queens |= coord;
-                break;
-            case Piece.King:
-                // king can be "captured" during search
-                King |= coord;
-                break;
-            default:
-                throw new ArgumentOutOfRangeException();
-        }
+        AddPiece(piece, coord);
     }
 
     public void ApplyEnPassantCapture(Coord coord)
     {
         var targetPawnRank = Side == Side.White ? 3 : 4;
         var targetPawn = coord with { Rank = targetPawnRank };
-        Pawns &= ~(BitBoard)targetPawn;
+        RemovePiece(Piece.Pawn, targetPawn);
     }
 
     public BitBoard PiecesOfType(Piece pieceType)
@@ -365,6 +376,7 @@ public class SideState
 
     public void AddPiece(Piece piece, Coord coord)
     {
+        _hash.FlipPiece(Side, piece, coord);
         switch (piece)
         {
             case Piece.Pawn:
@@ -384,6 +396,34 @@ public class SideState
                 break;
             case Piece.King:
                 King |= coord;
+                break;
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+    }
+
+    public void RemovePiece(Piece piece, Coord coord)
+    {
+        _hash.FlipPiece(Side, piece, coord);
+        switch (piece)
+        {
+            case Piece.Pawn:
+                Pawns &= ~(BitBoard)coord;
+                break;
+            case Piece.Bishop:
+                Bishops &= ~(BitBoard)coord;
+                break;
+            case Piece.Knight:
+                Knights &= ~(BitBoard)coord;
+                break;
+            case Piece.Rook:
+                Rooks &= ~(BitBoard)coord;
+                break;
+            case Piece.Queen:
+                Queens &= ~(BitBoard)coord;
+                break;
+            case Piece.King:
+                King &= ~(BitBoard)coord;
                 break;
             default:
                 throw new ArgumentOutOfRangeException();
