@@ -24,8 +24,9 @@
 </div>
 
 @code {
-    [Parameter]
-    public BoardState Board { get; set; }
+
+    [Parameter, EditorRequired]
+    public BoardState Board { get; set; } = null!;
     
     [Parameter]
     public bool BoardInverted { get; set; }
