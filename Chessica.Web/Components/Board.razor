@@ -118,7 +118,15 @@
         _pgnResult = isCheckmate
             ? _boardState.SideToMove == Side.White ? PgnGameResult.BlackWin : PgnGameResult.WhiteWin
             : PgnGameResult.Draw;
-        if (IsUsersMove)
+        if (_boardState.IsDrawByThreefoldRepetition())
+        {
+            StatusMessage = "Yawn, yawn, the game is drawn (threefold repetition)";
+        }
+        else if (_boardState.IsDrawByFiftyMoveRule())
+        {
+            StatusMessage = "Wow, total bore draw (fifty move rule)";
+        }
+        else if (IsUsersMove)
         {
             StatusMessage = isCheckmate
                 ? "Human scum, you are no match for Chessica"
@@ -135,6 +143,11 @@
     public async Task MakeEngineMove()
     {
         if (IsUsersMove) return;
+        if (_boardState.IsDrawByThreefoldRepetition() || _boardState.IsDrawByFiftyMoveRule())
+        {
+            GameOver(isCheckmate: false);
+            return;
+        }
         var (inCheck, numLegalMoves) = _boardState.GetGameState();
         if (numLegalMoves == 0)
         {
@@ -153,7 +166,11 @@
         }
         _pgnMoves.Push(new PgnMove(EngineSide, pgnSpec));
         CanUndo = _pgnMoves.Count > (UserSide == Side.White ? 1 : 2);
-        if (numLegalMoves == 0)
+        if (_boardState.IsDrawByThreefoldRepetition() || _boardState.IsDrawByFiftyMoveRule())
+        {
+            GameOver(isCheckmate: false);
+        }
+        else if (numLegalMoves == 0)
         {
             GameOver(isCheckmate: inCheck);
         }

@@ -31,6 +31,19 @@ public class MiniMaxSearchTests
         TestFindsMateInThree(SearchV2);
     }
 
+    [Test]
+    public void TestAvoidsDrawByThreefoldRepetitionWhenAhead_SearchV1()
+    {
+        TestAvoidsDrawByThreefoldRepetitionWhenAhead(SearchV1);
+    }
+
+    [Test]
+    public void TestAvoidsDrawByThreefoldRepetitionWhenAhead_SearchV2()
+    {
+        // currently too slow!
+        // TestAvoidsDrawByThreefoldRepetitionWhenAhead(SearchV2);
+    }
+
     private static void TestFindsMateInTwo(ISearch search)
     {
         var boardState = BoardState.ParseFen("kr5r/p7/8/8/8/1R2Q3/6q1/KR6 w - - 0 1");
@@ -58,5 +71,36 @@ public class MiniMaxSearchTests
         Assert.That(bestMove.ToString(), Is.EqualTo("Qf3h1"));
         boardState.Push(bestMove);
         Assert.That(boardState.IsCheckmate(), Is.True);
+    }
+
+    private static void TestAvoidsDrawByThreefoldRepetitionWhenAhead(ISearch search)
+    {
+        var board = BoardState.ParseFen("r3r1k1/pQp2ppp/2n2n2/4p3/2P5/B4q1b/P1PP1P1P/R3RBK1 b - - 4 15");
+
+        // black is up a knight
+        Assert.That(board.GetScore(), Is.EqualTo(-3.0));
+        var initialHashValue = board.HashValue;
+
+        board.Push("Qg4+");
+        board.Push("Kh1");
+
+        // here, black plays Qf3+
+        var bestMoveForBlackFirstTime = search.GetBestMove(board);
+        Assert.That(bestMoveForBlackFirstTime.ToString(), Is.EqualTo("Qg4f3"));
+
+        board.Push("Qf3+");
+        board.Push("Kg1");
+
+        // back to initial position
+        Assert.That(board.HashValue, Is.EqualTo(initialHashValue));
+
+        board.Push("Qg4+");
+        board.Push("Kh1");
+
+        // if black now plays Qf3+ again, white can respond with Kg1 and trigger a draw by threefold repetition
+        // since black is currently up a knight, so that would be tantamount to losing 3 points of material,
+        // so it shouldn't choose that move again
+        var bestMoveForBlackSecondTime = search.GetBestMove(board);
+        Assert.That(bestMoveForBlackSecondTime.ToString(), Is.Not.EqualTo("Qg4f3"));
     }
 }

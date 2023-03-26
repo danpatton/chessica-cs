@@ -7,7 +7,9 @@ namespace Chessica.Core;
 
 public class BoardState
 {
-    private readonly Stack<Tuple<Move, MoveUndoInfo>> _moveStack = new();
+    private readonly HashHistory _hashHistory;
+    private readonly Stack<Tuple<Move, MoveUndoInfo, long, bool>> _moveStack = new();
+    private bool _isThreefoldRepetition;
 
     private Option<List<Move>> _cachedLegalMoves;
     private Option<BitBoard> _cachedPassedPawns;
@@ -21,18 +23,19 @@ public class BoardState
 
     public Side SideToMove { get; private set; }
 
-    public BoardState(SideState whiteState, SideState blackState, Side sideToMove, int halfMoveClock = 0, int fullMoveNumber = 1)
+    public BoardState(SideState whiteState, SideState blackState, Side sideToMove, int halfMoveClock = 0, int fullMoveNumber = 1, HashHistory? hashHistory = null)
     {
         WhiteState = whiteState;
         BlackState = blackState;
         SideToMove = sideToMove;
         HalfMoveClock = halfMoveClock;
         FullMoveNumber = fullMoveNumber;
+        _hashHistory = hashHistory ?? new HashHistory(HashValue);
     }
 
     public BoardState Clone()
     {
-        return new BoardState(WhiteState.Clone(), BlackState.Clone(), SideToMove, HalfMoveClock, FullMoveNumber);
+        return new BoardState(WhiteState.Clone(), BlackState.Clone(), SideToMove, HalfMoveClock, FullMoveNumber, _hashHistory.Clone());
     }
 
     private readonly Regex _castlingMoveRegex = new("([Oo0](-[Oo0]){1,2})([+#]?)");
@@ -42,7 +45,9 @@ public class BoardState
     public double GetScore()
     {
         // TODO: improve on this!
-        return WhiteState.GetSimpleMaterialScore() - BlackState.GetSimpleMaterialScore();
+        return _isThreefoldRepetition
+            ? 0.0
+            : WhiteState.GetSimpleMaterialScore() - BlackState.GetSimpleMaterialScore();
     }
 
     public Move ToMove(string moveSpec)
@@ -285,18 +290,24 @@ public class BoardState
         return !inCheck && !legalMoves.Any();
     }
 
+    public bool IsDrawByThreefoldRepetition() => _isThreefoldRepetition;
+
+    public bool IsDrawByFiftyMoveRule() => HalfMoveClock >= 100;
+
     private class MovePopper : IDisposable
     {
         private readonly BoardState _board;
-        private readonly long _initialBoardHash;
+        private readonly long _originalHashValue;
+        private readonly bool _originalThreefoldRepetitionValue;
         private readonly Move _move;
         private readonly MoveUndoInfo _moveUndoInfo;
 
-        public MovePopper(BoardState board, long initialBoardHash)
+        public MovePopper(BoardState board, long originalHashValue, bool originalThreefoldRepetitionValue)
         {
             _board = board;
-            _initialBoardHash = initialBoardHash;
-            var (move, moveUndoInfo) = board._moveStack.Peek();
+            _originalHashValue = originalHashValue;
+            _originalThreefoldRepetitionValue = originalThreefoldRepetitionValue;
+            var (move, moveUndoInfo, _, _) = board._moveStack.Peek();
             _move = move;
             _moveUndoInfo = moveUndoInfo;
         }
@@ -308,13 +319,19 @@ public class BoardState
                 throw new Exception("WTF");
             }
 
-            var (move, moveUndoInfo) = t;
+            var (move, moveUndoInfo, _, _) = t;
             if (!move.Equals(_move) || !moveUndoInfo.Equals(_moveUndoInfo))
             {
                 throw new Exception("WTF");
             }
+
             _board.TryPop();
-            if (_board.HashValue != _initialBoardHash)
+            if (_board.HashValue != _originalHashValue)
+            {
+                throw new Exception("WTF");
+            }
+
+            if (_board._isThreefoldRepetition != _originalThreefoldRepetitionValue)
             {
                 throw new Exception("WTF");
             }
@@ -328,7 +345,8 @@ public class BoardState
 
     public IDisposable Push(Move move)
     {
-        var initialBoardHash = HashValue;
+        var originalHashValue = HashValue;
+        var originalThreefoldRepetitionValue = _isThreefoldRepetition;
         var ownSide = SideToMove == Side.White ? WhiteState : BlackState;
         var enemySide = SideToMove == Side.White ? BlackState : WhiteState;
         var moveUndoInfo = move.Apply(ownSide, enemySide, HalfMoveClock);
@@ -348,22 +366,30 @@ public class BoardState
             ++FullMoveNumber;
         }
 
-        _moveStack.Push(Tuple.Create(move, moveUndoInfo));
+        var newHashValue = HashValue;
+        var hashCount = _hashHistory.Push(newHashValue);
+        if (hashCount >= 3)
+        {
+            _isThreefoldRepetition = true;
+        }
+        _moveStack.Push(Tuple.Create(move, moveUndoInfo, newHashValue, originalThreefoldRepetitionValue));
 
         // mutated board state --> invalidate caches
         InvalidateCaches();
 
-        return new MovePopper(this, initialBoardHash);
+        return new MovePopper(this, originalHashValue, originalThreefoldRepetitionValue);
     }
 
     public bool TryPop()
     {
         if (_moveStack.TryPop(out var t))
         {
-            var (move, moveUndoInfo) = t;
+            var (move, moveUndoInfo, hashValue, wasThreefoldRepetition) = t;
             var ownSide = SideToMove == Side.White ? BlackState : WhiteState;
             var enemySide = SideToMove == Side.White ? WhiteState : BlackState;
             move.Undo(ownSide, enemySide, moveUndoInfo);
+            _hashHistory.Pop(hashValue);
+            _isThreefoldRepetition = wasThreefoldRepetition;
             SideToMove = SideToMove == Side.White ? Side.Black : Side.White;
             HalfMoveClock = moveUndoInfo.HalfMoveClock;
             if (SideToMove == Side.Black)

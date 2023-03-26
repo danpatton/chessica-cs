@@ -30,11 +30,29 @@ public static class SelfPlay
 
             moves.Add(new PgnMove(side, pgnSpec));
 
+            if (side == Side.White)
+            {
+                Console.Write($"{board.FullMoveNumber}. {pgnSpec} ");
+            }
+            else
+            {
+                Console.WriteLine(pgnSpec);
+            }
+
+            if (board.IsDrawByThreefoldRepetition())
+            {
+                Console.WriteLine(PgnGameResult.Draw.ToPgnString());
+                return new PgnGame(
+                    ImmutableDictionary<string, string>.Empty,
+                    moves.ToImmutableArray(),
+                    PgnGameResult.Draw);
+            }
             if (numLegalMoves == 0)
             {
                 var result = inCheck
                     ? board.SideToMove == Side.White ? PgnGameResult.BlackWin : PgnGameResult.WhiteWin
                     : PgnGameResult.Draw;
+                Console.WriteLine(result.ToPgnString());
                 return new PgnGame( 
                     ImmutableDictionary<string, string>.Empty,
                     moves.ToImmutableArray(),

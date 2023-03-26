@@ -105,18 +105,6 @@ public record PgnGame(IImmutableDictionary<string, string> Tags, IImmutableList<
 
             writer.WriteLine();
         }
-
-        switch (Result)
-        {
-            case PgnGameResult.WhiteWin:
-                writer.Write(" 1-0");
-                break;
-            case PgnGameResult.BlackWin:
-                writer.Write(" 0-1");
-                break;
-            case PgnGameResult.Draw:
-                writer.Write( "1/2-1/2");
-                break;
-        }
+        writer.Write(" " + Result.ToPgnString());
     }
 }

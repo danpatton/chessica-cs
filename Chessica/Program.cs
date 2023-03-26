@@ -19,8 +19,8 @@ using var logger = new LoggerConfiguration()
 // var moveGenerator = new PrecannedOpeningMoveGenerator(10, new MiniMaxMoveGenerator(4));
 var moveGenerator = new MiniMaxMoveGenerator(4);
 
-var uciSession = new UciSession(Console.In, Console.Out, logger, moveGenerator);
-uciSession.Run();
+// var uciSession = new UciSession(Console.In, Console.Out, logger, moveGenerator);
+// uciSession.Run();
 
-// var pgnGame = SelfPlay.Run(moveGenerator);
-// pgnGame.WriteToFile(@"C:\Users\HP\AppData\Local\Chessica\selfplay.pgn");
+var pgnGame = SelfPlay.Run(moveGenerator);
+pgnGame.WriteToFile(@"C:\Users\HP\AppData\Local\Chessica\selfplay.pgn");

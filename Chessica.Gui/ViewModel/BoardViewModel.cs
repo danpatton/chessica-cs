@@ -162,7 +162,13 @@ public class BoardViewModel : INotifyPropertyChanged
 
         _pgnMoves.Add(new PgnMove(UserSide, moveSpec));
         UpdateAll();
-        if (numLegalMoves == 0)
+        if (_boardState.IsDrawByThreefoldRepetition())
+        {
+            MessageBox.Show("Yawn, yawn, game drawn", "Threefold repetition");
+            _pgnResult = PgnGameResult.Draw;
+            OnPropertyChanged(nameof(PgnMoveHistory));
+        }
+        else if (numLegalMoves == 0)
         {
             var messageBoxText = inCheck
                 ? "Bloody hell mate, looks like you've got me."
@@ -198,6 +204,11 @@ public class BoardViewModel : INotifyPropertyChanged
 
             _pgnMoves.Add(new PgnMove(EngineSide, moveSpec));
             StatusMessage = $"Last engine move: {moveSpec}";
+            if (_boardState.IsDrawByThreefoldRepetition())
+            {
+                MessageBox.Show("Yawn, yawn, game drawn", "Threefold repetition");
+                _pgnResult = PgnGameResult.Draw;
+            }
             if (numLegalMoves == 0)
             {
                 var messageBoxText = inCheck

@@ -164,4 +164,17 @@ public class BoardStateTests
         var pgnSpec = move.ToPgnSpec(board);
         Assert.That(pgnSpec, Is.EqualTo(expectedPgnSpec));
     }
+
+    [TestCase("r3r1k1/pQp2ppp/2n2n2/4p3/2P5/B4q1b/P1PP1P1P/R3RBK1 b - - 4 15", "Qg4+ Kh1 Qf3+ Kg1 Qg4+ Kh1 Qf3+ Kg1")]
+    [TestCase("8/p4ppp/2b5/6RK/1n2r3/8/5r1P/3k4 b - - 0 51", "R4e2 Ra5 Rf4 Rg5 R2e4 Ra5 Rf2 Rg5 Nc2 Ra5 Nb4 Rg5")]
+    public void TestThreefoldRepetition(string inputFen, string moves)
+    {
+        var board = BoardState.ParseFen(inputFen);
+        foreach (var moveSpec in moves.Split(" "))
+        {
+            Assert.That(board.IsDrawByThreefoldRepetition(), Is.False);
+            board.Push(moveSpec);
+        }
+        Assert.That(board.IsDrawByThreefoldRepetition(), Is.True);
+    }
 }
