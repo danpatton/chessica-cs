@@ -64,6 +64,65 @@ public static class MoveCalculator
             }
         }
 
+        foreach (var sliderPiece in new[] { Piece.Queen, Piece.Rook, Piece.Bishop })
+        {
+            var checks = potentialChecks.From(sliderPiece);
+            foreach (var ownPiece in ownSide.PiecesOfType(sliderPiece))
+            {
+                var pieceMoves = new List<Move>();
+                foreach (var moveSequence in ownPiece.MoveSequences(sliderPiece, ownSide.Side))
+                {
+                    foreach (var coord in moveSequence)
+                    {
+                        if (ownPieces.IsOccupied(coord)) break;
+                        if (inCheck && !moveConstraints.CheckingPieces.IsOccupied(coord) &&
+                            !moveConstraints.CheckBlockingSquares.IsOccupied(coord))
+                        {
+                            if (enemyPieces.IsOccupied(coord)) break;
+                            continue;
+                        }
+
+                        pieceMoves.Add(new Move(sliderPiece, ownPiece, coord, enemyPieces.IsOccupied(coord),
+                            checks.IsOccupied(coord)));
+                        if (enemyPieces.IsOccupied(coord)) break;
+                    }
+                }
+
+                if (moveConstraints.DiagonalPins.IsOccupied(ownPiece))
+                {
+                    var allowedMoves = BitBoard.BishopsMoveMask(ownPiece) & moveConstraints.DiagonalPins;
+                    pieceMoves.RemoveAll(m => !allowedMoves.IsOccupied(m.To));
+                }
+                else if (moveConstraints.OrthogonalPins.IsOccupied(ownPiece))
+                {
+                    var allowedMoves = BitBoard.RooksMoveMask(ownPiece) & moveConstraints.OrthogonalPins;
+                    pieceMoves.RemoveAll(m => !allowedMoves.IsOccupied(m.To));
+                }
+
+                moves.AddRange(pieceMoves);
+            }
+        }
+
+        foreach (var ownKnight in ownSide.Knights)
+        {
+            if (pins.IsOccupied(ownKnight))
+            {
+                // pinned knights can't move at all
+                continue;
+            }
+
+            var checks = potentialChecks.From(Piece.Knight);
+            var knightMoves = ownKnight.KnightMovesMask();
+            foreach (var coord in knightMoves)
+            {
+                if (ownPieces.IsOccupied(coord)) continue;
+                if (inCheck && !moveConstraints.CheckingPieces.IsOccupied(coord) &&
+                    !moveConstraints.CheckBlockingSquares.IsOccupied(coord)) continue;
+                moves.Add(new Move(Piece.Knight, ownKnight, coord, enemyPieces.IsOccupied(coord),
+                    checks.IsOccupied(coord)));
+            }
+        }
+
         foreach (var ownPawn in ownSide.PiecesOfType(Piece.Pawn))
         {
             var pawnMoves = new List<Move>();
@@ -178,65 +237,6 @@ public static class MoveCalculator
             }
 
             moves.AddRange(pawnMoves);
-        }
-
-        foreach (var ownKnight in ownSide.Knights)
-        {
-            if (pins.IsOccupied(ownKnight))
-            {
-                // pinned knights can't move at all
-                continue;
-            }
-
-            var checks = potentialChecks.From(Piece.Knight);
-            var knightMoves = ownKnight.KnightMovesMask();
-            foreach (var coord in knightMoves)
-            {
-                if (ownPieces.IsOccupied(coord)) continue;
-                if (inCheck && !moveConstraints.CheckingPieces.IsOccupied(coord) &&
-                    !moveConstraints.CheckBlockingSquares.IsOccupied(coord)) continue;
-                moves.Add(new Move(Piece.Knight, ownKnight, coord, enemyPieces.IsOccupied(coord),
-                    checks.IsOccupied(coord)));
-            }
-        }
-
-        foreach (var sliderPiece in new[] { Piece.Bishop, Piece.Rook, Piece.Queen })
-        {
-            var checks = potentialChecks.From(sliderPiece);
-            foreach (var ownPiece in ownSide.PiecesOfType(sliderPiece))
-            {
-                var pieceMoves = new List<Move>();
-                foreach (var moveSequence in ownPiece.MoveSequences(sliderPiece, ownSide.Side))
-                {
-                    foreach (var coord in moveSequence)
-                    {
-                        if (ownPieces.IsOccupied(coord)) break;
-                        if (inCheck && !moveConstraints.CheckingPieces.IsOccupied(coord) &&
-                            !moveConstraints.CheckBlockingSquares.IsOccupied(coord))
-                        {
-                            if (enemyPieces.IsOccupied(coord)) break;
-                            continue;
-                        }
-
-                        pieceMoves.Add(new Move(sliderPiece, ownPiece, coord, enemyPieces.IsOccupied(coord),
-                            checks.IsOccupied(coord)));
-                        if (enemyPieces.IsOccupied(coord)) break;
-                    }
-                }
-
-                if (moveConstraints.DiagonalPins.IsOccupied(ownPiece))
-                {
-                    var allowedMoves = BitBoard.BishopsMoveMask(ownPiece) & moveConstraints.DiagonalPins;
-                    pieceMoves.RemoveAll(m => !allowedMoves.IsOccupied(m.To));
-                }
-                else if (moveConstraints.OrthogonalPins.IsOccupied(ownPiece))
-                {
-                    var allowedMoves = BitBoard.RooksMoveMask(ownPiece) & moveConstraints.OrthogonalPins;
-                    pieceMoves.RemoveAll(m => !allowedMoves.IsOccupied(m.To));
-                }
-
-                moves.AddRange(pieceMoves);
-            }
         }
 
         return moves;
