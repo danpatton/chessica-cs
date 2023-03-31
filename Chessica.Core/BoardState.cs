@@ -535,10 +535,10 @@ public class BoardState
         BitBoard ownPassedPawns = 0;
         foreach (var ownPawn in ownPawns)
         {
-            var fileMask = BitBoard.File(ownPawn.File);
-            if (ownPawn.File > 0) fileMask |= BitBoard.File(ownPawn.File - 1);
-            if (ownPawn.File < 7) fileMask |= BitBoard.File(ownPawn.File + 1);
-            var aheadMask = BitBoard.AheadOfRank(side, ownPawn.Rank);
+            var fileMask = BitBoard.FileMask(ownPawn.File);
+            if (ownPawn.File > 0) fileMask |= BitBoard.FileMask(ownPawn.File - 1);
+            if (ownPawn.File < 7) fileMask |= BitBoard.FileMask(ownPawn.File + 1);
+            var aheadMask = BitBoard.AheadOfRankMask(side, ownPawn.Rank);
             var mask = fileMask & aheadMask & enemyPawns;
             if (mask == 0)
             {

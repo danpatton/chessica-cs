@@ -2,9 +2,34 @@
 
 namespace Chessica.Core;
 
-public struct BitBoard : IEnumerable<Coord>
+public struct BitBoard : IEnumerable<Coord>, IEquatable<BitBoard>
 {
     private ulong _state;
+
+    public bool Equals(BitBoard other)
+    {
+        return _state == other._state;
+    }
+
+    public override bool Equals(object? obj)
+    {
+        return obj is BitBoard other && Equals(other);
+    }
+
+    public override int GetHashCode()
+    {
+        return _state.GetHashCode();
+    }
+
+    public static bool operator ==(BitBoard left, BitBoard right)
+    {
+        return left.Equals(right);
+    }
+
+    public static bool operator !=(BitBoard left, BitBoard right)
+    {
+        return !left.Equals(right);
+    }
 
     public bool IsOccupied(Coord coord)
     {
@@ -63,14 +88,32 @@ public struct BitBoard : IEnumerable<Coord>
         return GetEnumerator();
     }
 
-    public long Count
+    public int Count
     {
         get
         {
             var i = (long)_state;
-            i = i - ((i >> 1) & 0x5555555555555555);
+            i -= (i >> 1) & 0x5555555555555555;
             i = (i & 0x3333333333333333) + ((i >> 2) & 0x3333333333333333);
-            return (((i + (i >> 4)) & 0xF0F0F0F0F0F0F0F) * 0x101010101010101) >> 56;
+            return (int)((((i + (i >> 4)) & 0xF0F0F0F0F0F0F0F) * 0x101010101010101) >> 56);
+        }
+    }
+
+    public bool Any => _state != 0;
+
+    public Coord Single
+    {
+        get
+        {
+            var bb = _state;
+            var ordinal = MultiplyDeBruijnBitPosition[((ulong)((long)bb & -(long)bb) * DeBruijnSequence) >> 58];
+            var coord = Coord.FromOrdinal(ordinal);
+            if ((_state & ~(1ul << ordinal)) != 0)
+            {
+                throw new InvalidOperationException();
+            }
+
+            return coord;
         }
     }
 
@@ -86,68 +129,25 @@ public struct BitBoard : IEnumerable<Coord>
 
     public static BitBoard operator ~(BitBoard a) => ~a._state;
 
-    public static BitBoard Rank(int rank)
-    {
-        return Ranks[rank];
-    }
+    public static BitBoard KnightsMoveMask(Coord knight) => Mask.KnightsMove[knight.Ordinal];
 
-    public static BitBoard File(int file)
-    {
-        return Files[file];
-    }
+    public static BitBoard BishopsMoveMask(Coord bishop) => Mask.BishopsMove[bishop.Ordinal];
 
-    public static BitBoard AheadOfRank(Side side, int rank)
+    public static BitBoard RooksMoveMask(Coord rook) => Mask.RooksMove[rook.Ordinal];
+
+    public static BitBoard BoundingBoxMask(Coord x, Coord y) => Mask.BoundingBox[x.Ordinal, y.Ordinal];
+
+    public static BitBoard RankMask(int rank) => Mask.Rank[rank];
+
+    public static BitBoard FileMask(int file) => Mask.File[file];
+
+    public static BitBoard AheadOfRankMask(Side side, int rank)
     {
         return side switch
         {
-            Side.White => AheadOfWhiteRanks[rank],
-            Side.Black => AheadOfBlackRanks[rank],
+            Side.White => Mask.AheadOfWhiteRank[rank],
+            Side.Black => Mask.AheadOfBlackRank[rank],
             _ => throw new ArgumentOutOfRangeException()
         };
     }
-
-    private static readonly ulong[] Ranks =
-    {
-        0x00000000000000ff,
-        0x000000000000ff00,
-        0x0000000000ff0000,
-        0x00000000ff000000,
-        0x000000ff00000000,
-        0x0000ff0000000000,
-        0x00ff000000000000,
-        0xff00000000000000,
-    };
-
-    private static readonly ulong[] Files = {
-        0x101010101010101,
-        0x202020202020202,
-        0x404040404040404,
-        0x808080808080808,
-        0x1010101010101010,
-        0x2020202020202020,
-        0x4040404040404040,
-        0x8080808080808080
-    };
-
-    private static readonly ulong[] AheadOfWhiteRanks = {
-        0xffffffffffffff00,
-        0xffffffffffff0000,
-        0xffffffffff000000,
-        0xffffffff00000000,
-        0xffffff0000000000,
-        0xffff000000000000,
-        0xff00000000000000,
-        0x0000000000000000,
-    };
-
-    private static readonly ulong[] AheadOfBlackRanks = {
-        0x0000000000000000,
-        0x00000000000000ff,
-        0x000000000000ffff,
-        0x0000000000ffffff,
-        0x00000000ffffffff,
-        0x000000ffffffffff,
-        0x0000ffffffffffff,
-        0x00ffffffffffffff
-    };
 }

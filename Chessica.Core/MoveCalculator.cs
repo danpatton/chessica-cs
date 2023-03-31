@@ -1,15 +1,13 @@
-﻿using System.Collections.Immutable;
-
-namespace Chessica.Core;
+﻿namespace Chessica.Core;
 
 public static class MoveCalculator
 {
     private record MoveConstraints(
         BitBoard AttackedSquares,
-        BitBoard PinnedPieces,
         BitBoard CheckingPieces,
         BitBoard CheckBlockingSquares,
-        IImmutableDictionary<Coord, IImmutableList<Coord>> PinnedPiecePaths);
+        BitBoard DiagonalPins,
+        BitBoard OrthogonalPins);
 
     public static IEnumerable<Move> CalculateMoves(SideState ownSide, SideState enemySide, out bool inCheck)
     {
@@ -17,6 +15,7 @@ public static class MoveCalculator
         var potentialChecks = CalculatePotentialChecks(enemySide, ownSide);
         var enemyPieces = enemySide.AllPieces;
         var ownPieces = ownSide.AllPieces;
+        var pins = moveConstraints.DiagonalPins | moveConstraints.OrthogonalPins;
         var moves = new List<Move>();
 
         var ownKing = ownSide.PiecesOfType(Piece.King).Single();
@@ -169,10 +168,13 @@ public static class MoveCalculator
                 }
             }
 
-            if (moveConstraints.PinnedPieces.IsOccupied(ownPawn))
+            if (moveConstraints.DiagonalPins.IsOccupied(ownPawn))
             {
-                var pinnedPiecePath = moveConstraints.PinnedPiecePaths[ownPawn];
-                pawnMoves.RemoveAll(m => !pinnedPiecePath.Contains(m.To));
+                pawnMoves.RemoveAll(m => !moveConstraints.DiagonalPins.IsOccupied(m.To));
+            }
+            else if (moveConstraints.OrthogonalPins.IsOccupied(ownPawn))
+            {
+                pawnMoves.RemoveAll(m => !moveConstraints.OrthogonalPins.IsOccupied(m.To));
             }
 
             moves.AddRange(pawnMoves);
@@ -180,7 +182,7 @@ public static class MoveCalculator
 
         foreach (var ownKnight in ownSide.Knights)
         {
-            if (moveConstraints.PinnedPieces.IsOccupied(ownKnight))
+            if (pins.IsOccupied(ownKnight))
             {
                 // pinned knights can't move at all
                 continue;
@@ -222,10 +224,15 @@ public static class MoveCalculator
                     }
                 }
 
-                if (moveConstraints.PinnedPieces.IsOccupied(ownPiece))
+                if (moveConstraints.DiagonalPins.IsOccupied(ownPiece))
                 {
-                    var pinnedPiecePath = moveConstraints.PinnedPiecePaths[ownPiece];
-                    pieceMoves.RemoveAll(m => !pinnedPiecePath.Contains(m.To));
+                    var allowedMoves = BitBoard.BishopsMoveMask(ownPiece) & moveConstraints.DiagonalPins;
+                    pieceMoves.RemoveAll(m => !allowedMoves.IsOccupied(m.To));
+                }
+                else if (moveConstraints.OrthogonalPins.IsOccupied(ownPiece))
+                {
+                    var allowedMoves = BitBoard.RooksMoveMask(ownPiece) & moveConstraints.OrthogonalPins;
+                    pieceMoves.RemoveAll(m => !allowedMoves.IsOccupied(m.To));
                 }
 
                 moves.AddRange(pieceMoves);
@@ -237,77 +244,43 @@ public static class MoveCalculator
 
     private static MoveConstraints CalculateConstraints(SideState ownSide, SideState enemySide)
     {
-        BitBoard attackedSquares = 0;
-        BitBoard pinnedPieces = 0;
-        BitBoard checkingPieces = 0;
-        BitBoard checkBlockingSquares = 0;
-        var pinnedPiecePaths = ImmutableDictionary.CreateBuilder<Coord, IImmutableList<Coord>>();
-        var enemyPieces = enemySide.AllPieces;
-        var ownPieces = ownSide.AllPieces;
-        var ownPiecesStack = new Stack<Coord>();
+        BitBoard attackedSquares = 0ul;
+        BitBoard checkingPieces = 0ul;
+        BitBoard checkBlockingSquares = 0ul;
+        var ownKing = ownSide.King.Single;
+        var anyPiecesExceptOwnKing = (ownSide.AllPieces | enemySide.AllPieces) & ~ownSide.King;
         foreach (var pieceType in Enum.GetValues(typeof(Piece)).Cast<Piece>())
         {
             foreach (var enemyPiece in enemySide.PiecesOfType(pieceType))
             {
                 foreach (var moveSequence in enemyPiece.MoveSequences(pieceType, enemySide.Side, attacksOnly: true))
                 {
-                    ownPiecesStack.Clear();
+                    BitBoard attackPath = 0ul;
                     foreach (var coord in moveSequence)
                     {
-                        if (enemyPieces.IsOccupied(coord))
+                        if (ownKing == coord)
                         {
-                            if (ownPiecesStack.Count == 0)
-                            {
-                                // defended squares also count as attacked
-                                attackedSquares |= coord;
-                            }
-                            break;
-                        }
-                        if (!ownPiecesStack.Any())
-                        {
-                            attackedSquares |= coord;
-                        }
-
-                        if (ownSide.King.IsOccupied(coord))
-                        {
-                            if (ownPiecesStack.Count == 0)
-                            {
-                                // we are in check!
-                                checkingPieces |= enemyPiece;
-                                foreach (var c in moveSequence.TakeWhile(c => c != coord))
-                                {
-                                    checkBlockingSquares |= c;
-                                }
-                            }
-                            else if (ownPiecesStack.Count == 1)
-                            {
-                                var pinnedPiece = ownPiecesStack.Peek();
-                                pinnedPieces |= pinnedPiece;
-
-                                var pinnedPiecePath = new[] { enemyPiece }
-                                    .Concat(moveSequence.TakeWhile(m => !(ownPieces.IsOccupied(m) && m != pinnedPiece))).ToImmutableArray();
-
-                                // impossible to be pinned by more than one piece, hence .Add
-                                pinnedPiecePaths.Add(pinnedPiece, pinnedPiecePath);
-                            }
-
+                            // we are in check!
+                            checkingPieces |= enemyPiece;
+                            checkBlockingSquares |= attackPath;
                             // note we don't break here -- need to keep going "through" the king
                         }
-                        else if (ownPieces.IsOccupied(coord))
+                        attackPath |= coord;
+                        if (anyPiecesExceptOwnKing.IsOccupied(coord))
                         {
-                            if (ownPiecesStack.Any())
-                            {
-                                break;
-                            }
-
-                            ownPiecesStack.Push(coord);
+                            break;
                         }
                     }
+
+                    attackedSquares |= attackPath;
                 }
             }
         }
+
+        var diagonalPins = GetDiagonalPins(ownSide, enemySide);
+        var orthogonalPins = GetOrthogonalPins(ownSide, enemySide);
         return new MoveConstraints(
-            attackedSquares, pinnedPieces, checkingPieces, checkBlockingSquares, pinnedPiecePaths.ToImmutable());
+            attackedSquares, checkingPieces, checkBlockingSquares, diagonalPins, orthogonalPins);
     }
 
     public static IEnumerable<Move> CalculatePseudoLegalMoves(SideState ownSide, SideState enemySide)
@@ -318,7 +291,7 @@ public static class MoveCalculator
             return Array.Empty<Move>();
         }
         var attackedSquares = GetAttackedSquares(ownSide, enemySide);
-        var ownKing = ownSide.King.Single();
+        var ownKing = ownSide.King.Single;
         var inCheck = attackedSquares.IsOccupied(ownKing);
         var enemyPieces = enemySide.AllPieces;
         var ownPieces = ownSide.AllPieces;
@@ -471,9 +444,47 @@ public static class MoveCalculator
         return attackedSquares;
     }
 
+    private static BitBoard GetDiagonalPins(SideState ownSide, SideState enemySide)
+    {
+        var ownKing = ownSide.King.Single;
+        var mask = BitBoard.BishopsMoveMask(ownKing);
+        var pinners = (enemySide.Bishops | enemySide.Queens) & mask;
+        BitBoard pinMask = 0ul;
+        foreach (var pinner in pinners)
+        {
+            var pinPath = mask & BitBoard.BoundingBoxMask(pinner, ownKing) & ~ownSide.King;
+            var ownPiecesOnPath = ownSide.AllPieces & pinPath;
+            var enemyPiecesOnPath = enemySide.AllPieces & pinPath;
+            if (ownPiecesOnPath.Count == 1 && enemyPiecesOnPath.Count == 1)
+            {
+                pinMask |= pinPath;
+            }
+        }
+        return pinMask;
+    }
+
+    private static BitBoard GetOrthogonalPins(SideState ownSide, SideState enemySide)
+    {
+        var ownKing = ownSide.King.Single;
+        var mask = BitBoard.RooksMoveMask(ownKing);
+        var pinners = (enemySide.Rooks | enemySide.Queens) & mask;
+        BitBoard pinMask = 0ul;
+        foreach (var pinner in pinners)
+        {
+            var pinPath = mask & BitBoard.BoundingBoxMask(pinner, ownKing) & ~ownSide.King;
+            var ownPiecesOnPath = ownSide.AllPieces & pinPath;
+            var enemyPiecesOnPath = enemySide.AllPieces & pinPath;
+            if (ownPiecesOnPath.Count == 1 && enemyPiecesOnPath.Count == 1)
+            {
+                pinMask |= pinPath;
+            }
+        }
+        return pinMask;
+    }
+
     public static PotentialCheckMask CalculatePotentialChecks(SideState kingSide, SideState attackingSide)
     {
-        var king = kingSide.King.Single();
+        var king = kingSide.King.Single;
         var kingSidePieces = kingSide.AllPieces;
         var attackingPieces = attackingSide.AllPieces;
 
