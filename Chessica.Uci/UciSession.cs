@@ -95,7 +95,7 @@ public class UciSession
     private void HandleSetOptionCommand(string[] commandArgs)
     {
         var optionName = commandArgs.Length >= 2 ? commandArgs[1] : "";
-        WriteLine($"No such option: {optionName}");
+        _logger.Warning($"No such option: {optionName}");
     }
 
     private void HandleUnknownCommand(string commandString, string[] commandArgs)
