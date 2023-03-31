@@ -494,8 +494,8 @@ public static class MoveCalculator
         var knightMask = king.KnightMovesMask();
 
         var pawnAttackingRank = kingSide.Side == Side.White ? king.Rank + 1 : king.Rank - 1;
-        if (king.File > 0) pawnMask |= new Coord(king.File - 1, pawnAttackingRank) & attackingSide.Pawns;
-        if (king.File < 7) pawnMask |= new Coord(king.File + 1, pawnAttackingRank) & attackingSide.Pawns;
+        if (king.File > 0) pawnMask |= new Coord(king.File - 1, pawnAttackingRank);
+        if (king.File < 7) pawnMask |= new Coord(king.File + 1, pawnAttackingRank);
 
         foreach (var moveSequence in king.MoveSequences(Piece.Bishop, kingSide.Side))
         {
