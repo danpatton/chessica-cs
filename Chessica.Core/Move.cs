@@ -159,6 +159,8 @@ public class Move
         return string.Concat(pieceSpec, fromSpec, captureSpec, toSpec);
     }
 
+    public virtual string ToUciString() => $"{From}{To}";
+
     public virtual bool Equals(Move? other)
     {
         return other != null &&
@@ -286,6 +288,8 @@ public class PromotionMove : Move
         var promotionSpec = Promotion.Ascii();
         return string.Concat(fromSpec, captureSpec, toSpec, "=", promotionSpec);
     }
+
+    public override string ToUciString() => $"{From}{To}{Promotion.Ascii().ToLower()}";
 
     public override bool Equals(Move? other)
     {
