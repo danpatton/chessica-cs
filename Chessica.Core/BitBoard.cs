@@ -135,6 +135,8 @@ public struct BitBoard : IEnumerable<Coord>, IEquatable<BitBoard>
 
     public static BitBoard RooksMoveMask(Coord rook) => Mask.RooksMove[rook.Ordinal];
 
+    public static BitBoard KingsMoveMask(Coord king) => Mask.KingsMove[king.Ordinal];
+
     public static BitBoard BoundingBoxMask(Coord x, Coord y) => Mask.BoundingBox[x.Ordinal, y.Ordinal];
 
     public static BitBoard RankMask(int rank) => Mask.Rank[rank];

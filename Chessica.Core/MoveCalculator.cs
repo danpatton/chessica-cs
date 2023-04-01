@@ -16,18 +16,14 @@ public static class MoveCalculator
         var enemyPieces = enemySide.AllPieces;
         var ownPieces = ownSide.AllPieces;
         var pins = moveConstraints.DiagonalPins | moveConstraints.OrthogonalPins;
-        var moves = new List<Move>();
 
         var ownKing = ownSide.PiecesOfType(Piece.King).Single();
-        inCheck = moveConstraints.CheckingPieces.Count > 0;
+        inCheck = moveConstraints.CheckingPieces.Any;
 
-        var badSquaresForOwnKing = ownPieces | moveConstraints.AttackedSquares;
-        foreach (var moveSequence in ownKing.MoveSequences(Piece.King, ownSide.Side))
-        {
-            var coord = moveSequence.Single();
-            if (badSquaresForOwnKing.IsOccupied(coord)) continue;
-            moves.Add(new Move(Piece.King, ownKing, coord, enemyPieces.IsOccupied(coord)));
-        }
+        var kingMoves = BitBoard.KingsMoveMask(ownKing) & ~(ownPieces | moveConstraints.AttackedSquares);
+        var moves = kingMoves
+            .Select(coord => new Move(Piece.King, ownKing, coord, enemyPieces.IsOccupied(coord)))
+            .ToList();
 
         if (moveConstraints.CheckingPieces.Count > 1)
         {
