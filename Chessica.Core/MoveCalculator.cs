@@ -64,11 +64,20 @@ public static class MoveCalculator
             var checks = potentialChecks.From(sliderPiece);
             foreach (var ownPiece in ownSide.PiecesOfType(sliderPiece))
             {
-                var pieceMoves = new List<Move>();
+                BitBoard allowedMoves = ulong.MaxValue;
+                if (moveConstraints.DiagonalPins.IsOccupied(ownPiece))
+                {
+                    allowedMoves = BitBoard.BishopsMoveMask(ownPiece) & moveConstraints.DiagonalPins;
+                }
+                else if (moveConstraints.OrthogonalPins.IsOccupied(ownPiece))
+                {
+                    allowedMoves = BitBoard.RooksMoveMask(ownPiece) & moveConstraints.OrthogonalPins;
+                }
                 foreach (var moveSequence in ownPiece.MoveSequences(sliderPiece, ownSide.Side))
                 {
                     foreach (var coord in moveSequence)
                     {
+                        if (!allowedMoves.IsOccupied(coord)) continue;
                         if (ownPieces.IsOccupied(coord)) break;
                         if (inCheck && !moveConstraints.CheckingPieces.IsOccupied(coord) &&
                             !moveConstraints.CheckBlockingSquares.IsOccupied(coord))
@@ -77,24 +86,11 @@ public static class MoveCalculator
                             continue;
                         }
 
-                        pieceMoves.Add(new Move(sliderPiece, ownPiece, coord, enemyPieces.IsOccupied(coord),
+                        moves.Add(new Move(sliderPiece, ownPiece, coord, enemyPieces.IsOccupied(coord),
                             checks.IsOccupied(coord)));
                         if (enemyPieces.IsOccupied(coord)) break;
                     }
                 }
-
-                if (moveConstraints.DiagonalPins.IsOccupied(ownPiece))
-                {
-                    var allowedMoves = BitBoard.BishopsMoveMask(ownPiece) & moveConstraints.DiagonalPins;
-                    pieceMoves.RemoveAll(m => !allowedMoves.IsOccupied(m.To));
-                }
-                else if (moveConstraints.OrthogonalPins.IsOccupied(ownPiece))
-                {
-                    var allowedMoves = BitBoard.RooksMoveMask(ownPiece) & moveConstraints.OrthogonalPins;
-                    pieceMoves.RemoveAll(m => !allowedMoves.IsOccupied(m.To));
-                }
-
-                moves.AddRange(pieceMoves);
             }
         }
 
