@@ -39,9 +39,8 @@ public static class MoveCalculator
             if (ownSide.CanCastleShort)
             {
                 var kingToSquare = ownKing with { File = 6 };
-                var rookToSquare = ownKing with { File = 5 };
-                var castleThroughSquares = new[] { rookToSquare, kingToSquare };
-                if (!castleThroughSquares.Any(squaresWeCannotCastleThrough.IsOccupied))
+                var castlingPath = BitBoard.BoundingBoxMask(ownKing, kingToSquare) & ~ownSide.King;
+                if (!(castlingPath & squaresWeCannotCastleThrough).Any)
                 {
                     moves.Add(new CastlingMove(ownKing, kingToSquare));
                 }
@@ -50,10 +49,10 @@ public static class MoveCalculator
             if (ownSide.CanCastleLong)
             {
                 var kingToSquare = ownKing with { File = 2 };
-                var rookToSquare = ownKing with { File = 3 };
                 var inBetweenSquare = ownKing with { File = 1 };
-                var castleThroughSquares = new[] { rookToSquare, kingToSquare };
-                if (!castleThroughSquares.Any(squaresWeCannotCastleThrough.IsOccupied) && !allPieces.IsOccupied(inBetweenSquare))
+                var castlingPath = BitBoard.BoundingBoxMask(ownKing, kingToSquare) & ~ownSide.King;
+                if (!(castlingPath & squaresWeCannotCastleThrough).Any &&
+                    !allPieces.IsOccupied(inBetweenSquare))
                 {
                     moves.Add(new CastlingMove(ownKing, kingToSquare));
                 }
