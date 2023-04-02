@@ -205,10 +205,10 @@ public static class MoveCalculator
                     {
                         pawnMoves.AddRange(new[]
                         {
-                            new PromotionMove(ownPawn, coord, Piece.Queen, potentialChecks.QueenMask.IsOccupied(coord)),
-                            new PromotionMove(ownPawn, coord, Piece.Rook, potentialChecks.RookMask.IsOccupied(coord)),
-                            new PromotionMove(ownPawn, coord, Piece.Knight, potentialChecks.KnightMask.IsOccupied(coord)),
-                            new PromotionMove(ownPawn, coord, Piece.Bishop, potentialChecks.BishopMask.IsOccupied(coord))
+                            new PromotionMove(ownPawn, coord, Piece.Queen, false, potentialChecks.QueenMask.IsOccupied(coord)),
+                            new PromotionMove(ownPawn, coord, Piece.Rook, false, potentialChecks.RookMask.IsOccupied(coord)),
+                            new PromotionMove(ownPawn, coord, Piece.Knight, false, potentialChecks.KnightMask.IsOccupied(coord)),
+                            new PromotionMove(ownPawn, coord, Piece.Bishop, false, potentialChecks.BishopMask.IsOccupied(coord))
                         });
                     }
                     else
