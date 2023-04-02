@@ -117,6 +117,32 @@ public struct BitBoard : IEnumerable<Coord>, IEquatable<BitBoard>
         }
     }
 
+    public BitBoard PawnPushMask(Side side)
+    {
+        return side == Side.White
+            ? _state << 8
+            : _state >> 8;
+    }
+
+    public BitBoard PawnCaptureMask(Side side)
+    {
+        return PawnLeftCaptureMask(side) | PawnRightCaptureMask(side);
+    }
+
+    public BitBoard PawnLeftCaptureMask(Side side)
+    {
+        return side == Side.White
+            ? (_state & ~FileMask(0)) << 7
+            : (_state & ~FileMask(7)) >> 7;
+    }
+
+    public BitBoard PawnRightCaptureMask(Side side)
+    {
+        return side == Side.White
+            ? (_state & ~FileMask(7)) << 9
+            : (_state & ~FileMask(0)) >> 9;
+    }
+
     public static implicit operator ulong(BitBoard b) => b._state;
 
     public static implicit operator BitBoard(ulong state) => new() { _state = state };

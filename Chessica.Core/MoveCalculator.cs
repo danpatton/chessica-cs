@@ -15,9 +15,10 @@ public static class MoveCalculator
         var potentialChecks = CalculatePotentialChecks(enemySide, ownSide);
         var enemyPieces = enemySide.AllPieces;
         var ownPieces = ownSide.AllPieces;
+        var allPieces = ownPieces | enemyPieces;
         var pins = moveConstraints.DiagonalPins | moveConstraints.OrthogonalPins;
 
-        var ownKing = ownSide.PiecesOfType(Piece.King).Single();
+        var ownKing = ownSide.PiecesOfType(Piece.King).Single;
         inCheck = moveConstraints.CheckingPieces.Any;
 
         var kingMoves = BitBoard.KingsMoveMask(ownKing) & ~(ownPieces | moveConstraints.AttackedSquares);
@@ -34,7 +35,6 @@ public static class MoveCalculator
         if (!inCheck)
         {
             // castling
-            var allPieces = ownPieces | enemyPieces;
             var squaresWeCannotCastleThrough = ownPieces | enemyPieces | moveConstraints.AttackedSquares;
             if (ownSide.CanCastleShort)
             {
@@ -73,6 +73,7 @@ public static class MoveCalculator
                 {
                     allowedMoves = BitBoard.RooksMoveMask(ownPiece) & moveConstraints.OrthogonalPins;
                 }
+
                 foreach (var moveSequence in ownPiece.MoveSequences(sliderPiece, ownSide.Side))
                 {
                     foreach (var coord in moveSequence)
@@ -114,121 +115,176 @@ public static class MoveCalculator
             }
         }
 
-        foreach (var ownPawn in ownSide.PiecesOfType(Piece.Pawn))
+        // ownSide.Side == White => d == 1
+        // ownSide.Side == Black => d == -1
+        var d = 1 - 2 * (int)ownSide.Side;
+        var pawnDoublePushRank = 3 + (int)ownSide.Side;
+
+        var pawnMoves = new List<Move>();
+
+        var diagonallyPinnedPawns = ownSide.Pawns & moveConstraints.DiagonalPins;
+        if (diagonallyPinnedPawns.Any)
         {
-            var pawnMoves = new List<Move>();
-            var allPieces = ownPieces | enemyPieces;
-            foreach (var moveSequence in ownPawn.MoveSequences(Piece.Pawn, ownSide.Side))
+            foreach (var ownPawn in diagonallyPinnedPawns)
             {
-                var coord = moveSequence.Single();
-
-                var isCapture = coord.File != ownPawn.File;
-                if (isCapture)
+                BitBoard ownPawnBb = ownPawn;
+                foreach (var capture in ownPawnBb.PawnCaptureMask(ownSide.Side) & moveConstraints.DiagonalPins &
+                                        enemyPieces)
                 {
-                    if (enemySide.IsEnPassantSquare(coord) && ownPawn.Rank == ownKing.Rank)
-                    {
-                        // weird edge case; "partially" pinned pawn (ep capture reveals rook/queen check on same rank)
-                        var enemyRooksAndQueens = enemySide.Rooks | enemySide.Queens;
-                        var dir = ownKing.File > ownPawn.File ? -1 : 1;
-                        var canCaptureEp = true;
-                        for (var file = ownKing.File + dir; file is >= 0 and < 8; file += dir)
-                        {
-                            var c = ownKing with { File = file };
-                            if (enemyRooksAndQueens.IsOccupied(c))
-                            {
-                                canCaptureEp = false;
-                                break;
-                            }
-
-                            if (c.File != coord.File && c.File != ownPawn.File && allPieces.IsOccupied(c))
-                            {
-                                break;
-                            }
-                        }
-
-                        if (!canCaptureEp)
-                        {
-                            continue;
-                        }
-                    }
-                    if (enemyPieces.IsOccupied(coord) || enemySide.IsEnPassantSquare(coord))
-                    {
-                        if (inCheck && enemySide.IsEnPassantSquare(coord))
-                        {
-                            // ep capture needs to get us out of check
-                            var pawnWeAreCapturing = coord with { Rank = ownPawn.Rank };
-                            if (!moveConstraints.CheckingPieces.IsOccupied(pawnWeAreCapturing) &&
-                                !moveConstraints.CheckBlockingSquares.IsOccupied(pawnWeAreCapturing))
-                            {
-                                continue;
-                            }
-                        }
-                        if (inCheck && !(moveConstraints.CheckingPieces.IsOccupied(coord) || enemySide.IsEnPassantSquare(coord)))
-                        {
-                            continue;
-                        }
-                        if (coord.Rank is 0 or 7)
-                        {
-                            pawnMoves.AddRange(new[]
-                            {
-                                new PromotionMove(ownPawn, coord, Piece.Queen, true, potentialChecks.QueenMask.IsOccupied(coord)),
-                                new PromotionMove(ownPawn, coord, Piece.Rook, true, potentialChecks.RookMask.IsOccupied(coord)),
-                                new PromotionMove(ownPawn, coord, Piece.Knight, true, potentialChecks.KnightMask.IsOccupied(coord)),
-                                new PromotionMove(ownPawn, coord, Piece.Bishop, true, potentialChecks.BishopMask.IsOccupied(coord))
-                            });
-                        }
-                        else
-                        {
-                            pawnMoves.Add(new Move(Piece.Pawn, ownPawn, coord, true, potentialChecks.PawnMask.IsOccupied(coord)));
-                        }
-                    }
-                }
-                else
-                {
-                    if (inCheck && !moveConstraints.CheckBlockingSquares.IsOccupied(coord))
-                    {
-                        continue;
-                    }
-                    if (allPieces.IsOccupied(coord)) continue;
-                    if (ownPawn.Rank == 1 && coord.Rank == 3)
-                    {
-                        var inBetweenSquare = ownPawn with {Rank = 2};
-                        if (allPieces.IsOccupied(inBetweenSquare)) continue;
-                    }
-                    if (ownPawn.Rank == 6 && coord.Rank == 4)
-                    {
-                        var inBetweenSquare = ownPawn with {Rank = 5};
-                        if (allPieces.IsOccupied(inBetweenSquare)) continue;
-                    }
-
-                    if (coord.Rank is 0 or 7)
-                    {
-                        pawnMoves.AddRange(new[]
-                        {
-                            new PromotionMove(ownPawn, coord, Piece.Queen, false, potentialChecks.QueenMask.IsOccupied(coord)),
-                            new PromotionMove(ownPawn, coord, Piece.Rook, false, potentialChecks.RookMask.IsOccupied(coord)),
-                            new PromotionMove(ownPawn, coord, Piece.Knight, false, potentialChecks.KnightMask.IsOccupied(coord)),
-                            new PromotionMove(ownPawn, coord, Piece.Bishop, false, potentialChecks.BishopMask.IsOccupied(coord))
-                        });
-                    }
-                    else
-                    {
-                        pawnMoves.Add(new Move(Piece.Pawn, ownPawn, coord, isCheck: potentialChecks.PawnMask.IsOccupied(coord)));
-                    }
+                    pawnMoves.Add(new Move(Piece.Pawn, ownPawn, capture, true,
+                        potentialChecks.PawnMask.IsOccupied(capture)));
                 }
             }
-
-            if (moveConstraints.DiagonalPins.IsOccupied(ownPawn))
-            {
-                pawnMoves.RemoveAll(m => !moveConstraints.DiagonalPins.IsOccupied(m.To));
-            }
-            else if (moveConstraints.OrthogonalPins.IsOccupied(ownPawn))
-            {
-                pawnMoves.RemoveAll(m => !moveConstraints.OrthogonalPins.IsOccupied(m.To));
-            }
-
-            moves.AddRange(pawnMoves);
         }
+
+        var orthogonallyPinnedPawns = ownSide.Pawns & moveConstraints.OrthogonalPins;
+        if (orthogonallyPinnedPawns.Any)
+        {
+            foreach (var ownPawn in orthogonallyPinnedPawns)
+            {
+                BitBoard ownPawnBb = ownPawn;
+                var singlePush = ownPawnBb.PawnPushMask(ownSide.Side) & moveConstraints.OrthogonalPins &
+                                 ~enemyPieces;
+                if (singlePush.Any)
+                {
+                    var target = singlePush.Single;
+                    pawnMoves.Add(new Move(Piece.Pawn, ownPawn, target, false,
+                        potentialChecks.PawnMask.IsOccupied(target)));
+                }
+
+                var doublePush = singlePush.PawnPushMask(ownSide.Side) & moveConstraints.OrthogonalPins &
+                                 ~enemyPieces & BitBoard.RankMask(pawnDoublePushRank);
+                if (doublePush.Any)
+                {
+                    var target = doublePush.Single;
+                    pawnMoves.Add(new Move(Piece.Pawn, ownPawn, target, false,
+                        potentialChecks.PawnMask.IsOccupied(target)));
+                }
+            }
+        }
+
+        var unpinnedPawns = ownSide.Pawns & ~pins;
+        var pawnPushes = unpinnedPawns.PawnPushMask(ownSide.Side) & ~allPieces;
+        foreach (var pawnPush in pawnPushes)
+        {
+            var pawn = pawnPush with { Rank = pawnPush.Rank - d };
+            if (pawnPush.Rank is 0 or 7)
+            {
+                pawnMoves.Add(new PromotionMove(pawn, pawnPush, Piece.Queen, false,
+                    potentialChecks.QueenMask.IsOccupied(pawnPush)));
+                pawnMoves.Add(new PromotionMove(pawn, pawnPush, Piece.Rook, false,
+                    potentialChecks.RookMask.IsOccupied(pawnPush)));
+                pawnMoves.Add(new PromotionMove(pawn, pawnPush, Piece.Knight, false,
+                    potentialChecks.QueenMask.IsOccupied(pawnPush)));
+                pawnMoves.Add(new PromotionMove(pawn, pawnPush, Piece.Bishop, false,
+                    potentialChecks.RookMask.IsOccupied(pawnPush)));
+            }
+            else
+            {
+                pawnMoves.Add(new Move(Piece.Pawn, pawn, pawnPush));
+            }
+        }
+
+        var pawnDoublePushes =
+            pawnPushes.PawnPushMask(ownSide.Side) & BitBoard.RankMask(pawnDoublePushRank) & ~allPieces;
+        foreach (var doublePawnPush in pawnDoublePushes)
+        {
+            var pawn = doublePawnPush with { Rank = doublePawnPush.Rank - d - d };
+            pawnMoves.Add(new Move(Piece.Pawn, pawn, doublePawnPush));
+        }
+
+        var pawnLeftCapturesExcludingEp = unpinnedPawns.PawnLeftCaptureMask(ownSide.Side) & enemySide.AllPieces;
+        foreach (var pawnCapture in pawnLeftCapturesExcludingEp)
+        {
+            var pawn = new Coord(Rank: pawnCapture.Rank - d, File: pawnCapture.File + d);
+            if (pawnCapture.Rank is 0 or 7)
+            {
+                pawnMoves.Add(new PromotionMove(pawn, pawnCapture, Piece.Queen, true,
+                    potentialChecks.QueenMask.IsOccupied(pawnCapture)));
+                pawnMoves.Add(new PromotionMove(pawn, pawnCapture, Piece.Rook, true,
+                    potentialChecks.RookMask.IsOccupied(pawnCapture)));
+                pawnMoves.Add(new PromotionMove(pawn, pawnCapture, Piece.Knight, true,
+                    potentialChecks.QueenMask.IsOccupied(pawnCapture)));
+                pawnMoves.Add(new PromotionMove(pawn, pawnCapture, Piece.Bishop, true,
+                    potentialChecks.RookMask.IsOccupied(pawnCapture)));
+            }
+            else
+            {
+                pawnMoves.Add(new Move(Piece.Pawn, pawn, pawnCapture, true,
+                    potentialChecks.PawnMask.IsOccupied(pawnCapture)));
+            }
+        }
+
+        var pawnRightCapturesExcludingEp = unpinnedPawns.PawnRightCaptureMask(ownSide.Side) & enemySide.AllPieces;
+        foreach (var pawnCapture in pawnRightCapturesExcludingEp)
+        {
+            var pawn = new Coord(Rank: pawnCapture.Rank - d, File: pawnCapture.File - d);
+            if (pawnCapture.Rank is 0 or 7)
+            {
+                pawnMoves.Add(new PromotionMove(pawn, pawnCapture, Piece.Queen, true,
+                    potentialChecks.QueenMask.IsOccupied(pawnCapture)));
+                pawnMoves.Add(new PromotionMove(pawn, pawnCapture, Piece.Rook, true,
+                    potentialChecks.RookMask.IsOccupied(pawnCapture)));
+                pawnMoves.Add(new PromotionMove(pawn, pawnCapture, Piece.Knight, true,
+                    potentialChecks.QueenMask.IsOccupied(pawnCapture)));
+                pawnMoves.Add(new PromotionMove(pawn, pawnCapture, Piece.Bishop, true,
+                    potentialChecks.RookMask.IsOccupied(pawnCapture)));
+            }
+            else
+            {
+                pawnMoves.Add(new Move(Piece.Pawn, pawn, pawnCapture, true,
+                    potentialChecks.PawnMask.IsOccupied(pawnCapture)));
+            }
+        }
+
+        enemySide.EnPassantSquare.MatchSome(ep =>
+        {
+            BitBoard bbEp = ep;
+            var potentialCapturers = unpinnedPawns & bbEp.PawnCaptureMask(enemySide.Side);
+            var capturersOnKingsRank = potentialCapturers & BitBoard.RankMask(ownKing.Rank);
+            var canCaptureEp = true;
+            if (capturersOnKingsRank.Count == 1)
+            {
+                // weird edge case; "partially" pinned pawn (ep capture reveals rook/queen check on same rank)
+                var enemyRooksAndQueensOnSameRank =
+                    (enemySide.Rooks | enemySide.Queens) & BitBoard.RankMask(ownKing.Rank);
+                foreach (var enemyRookOrQueen in enemyRooksAndQueensOnSameRank)
+                {
+                    var bb = BitBoard.BoundingBoxMask(enemyRookOrQueen, ownKing) & allPieces;
+                    if (bb.Count < 5)
+                    {
+                        canCaptureEp = false;
+                        break;
+                    }
+                }
+            }
+
+            if (canCaptureEp)
+            {
+                var isCheck = potentialChecks.PawnMask.IsOccupied(ep);
+                foreach (var ownPawn in potentialCapturers)
+                {
+                    pawnMoves.Add(new Move(Piece.Pawn, ownPawn, ep, true, isCheck));
+                }
+            }
+        });
+
+        if (inCheck)
+        {
+            var checkDodgers = moveConstraints.CheckingPieces | moveConstraints.CheckBlockingSquares;
+            enemySide.EnPassantSquare.MatchSome(ep =>
+            {
+                BitBoard epBb = ep;
+                if (epBb.PawnPushMask(enemySide.Side) == moveConstraints.CheckingPieces)
+                {
+                    // ep capture gets us out of check
+                    checkDodgers = epBb;
+                }
+            });
+            pawnMoves.RemoveAll(m => !checkDodgers.IsOccupied(m.To));
+        }
+
+        moves.AddRange(pawnMoves);
 
         return moves;
     }
@@ -272,167 +328,6 @@ public static class MoveCalculator
         var orthogonalPins = GetOrthogonalPins(ownSide, enemySide);
         return new MoveConstraints(
             attackedSquares, checkingPieces, checkBlockingSquares, diagonalPins, orthogonalPins);
-    }
-
-    public static IEnumerable<Move> CalculatePseudoLegalMoves(SideState ownSide, SideState enemySide)
-    {
-        if (ownSide.King == 0)
-        {
-            // we are kingless => game is already over, there are no pseudo-legal moves
-            return Array.Empty<Move>();
-        }
-        var attackedSquares = GetAttackedSquares(ownSide, enemySide);
-        var ownKing = ownSide.King.Single;
-        var inCheck = attackedSquares.IsOccupied(ownKing);
-        var enemyPieces = enemySide.AllPieces;
-        var ownPieces = ownSide.AllPieces;
-
-        var moves = new List<Move>();
-
-        var badSquaresForOwnKing = ownPieces | attackedSquares;
-        foreach (var moveSequence in ownKing.MoveSequences(Piece.King, ownSide.Side))
-        {
-            var coord = moveSequence.Single();
-            if (badSquaresForOwnKing.IsOccupied(coord)) continue;
-            moves.Add(new Move(Piece.King, ownKing, coord, enemyPieces.IsOccupied(coord)));
-        }
-
-        if (!inCheck)
-        {
-            // castling
-            var squaresWeCannotCastleThrough = ownPieces | enemyPieces | attackedSquares;
-            if (ownSide.CanCastleShort)
-            {
-                var kingToSquare = ownKing with { File = 6 };
-                var rookToSquare = ownKing with { File = 5 };
-                var inBetweenSquares = new[] { rookToSquare, kingToSquare };
-                if (!inBetweenSquares.Any(squaresWeCannotCastleThrough.IsOccupied))
-                {
-                    moves.Add(new CastlingMove(ownKing, kingToSquare));
-                }
-            }
-
-            if (ownSide.CanCastleLong)
-            {
-                var kingToSquare = ownKing with { File = 2 };
-                var rookToSquare = ownKing with { File = 3 };
-                var inBetweenSquares = new[] { rookToSquare, kingToSquare };
-                if (!inBetweenSquares.Any(squaresWeCannotCastleThrough.IsOccupied))
-                {
-                    moves.Add(new CastlingMove(ownKing, kingToSquare));
-                }
-            }
-        }
-
-        foreach (var pieceType in Enum.GetValues(typeof(Piece)).Cast<Piece>())
-        {
-            if (pieceType == Piece.King)
-            {
-                // already enumerated king moves above
-                continue;
-            }
-            if (pieceType == Piece.Pawn)
-            {
-                foreach (var ownPawn in ownSide.PiecesOfType(Piece.Pawn))
-                {
-                    var pawnMoves = new List<Move>();
-                    var allPieces = ownPieces | enemyPieces;
-                    foreach (var moveSequence in ownPawn.MoveSequences(Piece.Pawn, ownSide.Side))
-                    {
-                        var coord = moveSequence.Single();
-
-                        if (coord.File == ownPawn.File)
-                        {
-                            if (allPieces.IsOccupied(coord)) continue;
-                            if (ownPawn.Rank == 1 && coord.Rank == 3)
-                            {
-                                var inBetweenSquare = ownPawn with {Rank = 2};
-                                if (allPieces.IsOccupied(inBetweenSquare)) continue;
-                            }
-                            if (ownPawn.Rank == 6 && coord.Rank == 4)
-                            {
-                                var inBetweenSquare = ownPawn with {Rank = 5};
-                                if (allPieces.IsOccupied(inBetweenSquare)) continue;
-                            }
-
-                            if (coord.Rank is 0 or 7)
-                            {
-                                foreach (var promotion in new[] { Piece.Queen, Piece.Rook, Piece.Knight, Piece.Bishop })
-                                {
-                                    pawnMoves.Add(new PromotionMove(ownPawn, coord, promotion, false));
-                                }
-                            }
-                            else
-                            {
-                                pawnMoves.Add(new Move(Piece.Pawn, ownPawn, coord));
-                            }
-                        }
-                        else
-                        {
-                            if (enemyPieces.IsOccupied(coord) || enemySide.IsEnPassantSquare(coord))
-                            {
-                                if (coord.Rank is 0 or 7)
-                                {
-                                    foreach (var promotion in new[] { Piece.Queen, Piece.Rook, Piece.Knight, Piece.Bishop })
-                                    {
-                                        pawnMoves.Add(new PromotionMove(ownPawn, coord, promotion, true));
-                                    }
-                                }
-                                pawnMoves.Add(new Move(Piece.Pawn, ownPawn, coord, true));
-                            }
-                        }
-                    }
-                    
-                    moves.AddRange(pawnMoves);
-                }
-            }
-            else
-            {
-                foreach (var ownPiece in ownSide.PiecesOfType(pieceType))
-                {
-                    var pieceMoves = new List<Move>();
-                    foreach (var moveSequence in ownPiece.MoveSequences(pieceType, ownSide.Side))
-                    {
-                        foreach (var coord in moveSequence)
-                        {
-                            if (ownPieces.IsOccupied(coord)) break;
-                            pieceMoves.Add(new Move(pieceType, ownPiece, coord, enemyPieces.IsOccupied(coord)));
-                            if (enemyPieces.IsOccupied(coord)) break;
-                        }
-                    }
-
-                    moves.AddRange(pieceMoves);
-                }
-            }
-        }
-
-        return moves;
-    }
-
-    private static BitBoard GetAttackedSquares(SideState ownSide, SideState enemySide)
-    {
-        BitBoard attackedSquares = 0;
-        var ownPiecesExceptKing = ownSide.AllPieces & ~ownSide.King;
-        var enemyPieces = enemySide.AllPieces;
-        foreach (var pieceType in Enum.GetValues(typeof(Piece)).Cast<Piece>())
-        {
-            foreach (var enemyPiece in enemySide.PiecesOfType(pieceType))
-            {
-                foreach (var moveSequence in enemyPiece.MoveSequences(pieceType, enemySide.Side, attacksOnly: true))
-                {
-                    foreach (var coord in moveSequence)
-                    {
-                        attackedSquares |= coord;
-                        if (enemyPieces.IsOccupied(coord) || ownPiecesExceptKing.IsOccupied(coord))
-                        {
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        return attackedSquares;
     }
 
     private static BitBoard GetDiagonalPins(SideState ownSide, SideState enemySide)

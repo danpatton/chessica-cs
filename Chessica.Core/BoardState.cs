@@ -253,13 +253,6 @@ public class BoardState
             });
     }
 
-    public IEnumerable<Move> GetPseudoLegalMoves()
-    {
-        var ownSide = SideToMove == Side.White ? WhiteState : BlackState;
-        var enemySide = SideToMove == Side.White ? BlackState : WhiteState;
-        return MoveCalculator.CalculatePseudoLegalMoves(ownSide, enemySide);
-    }
-
     public (bool InCheck, int NumLegalMoves) GetGameState()
     {
         var ownSide = SideToMove == Side.White ? WhiteState : BlackState;
