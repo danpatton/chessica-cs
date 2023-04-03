@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.Numerics;
 
 namespace Chessica.Core;
 
@@ -57,47 +58,13 @@ public struct BitBoard : IEnumerable<Coord>, IEquatable<BitBoard>
         _state &= ~(1ul << coord.Ordinal);
     }
 
-    private const ulong DeBruijnSequence = 0x37E84A99DAE458F;
+    public Enumerator GetEnumerator() => new(_state);
 
-    private static readonly int[] MultiplyDeBruijnBitPosition =
-    {
-        0, 1, 17, 2, 18, 50, 3, 57,
-        47, 19, 22, 51, 29, 4, 33, 58,
-        15, 48, 20, 27, 25, 23, 52, 41,
-        54, 30, 38, 5, 43, 34, 59, 8,
-        63, 16, 49, 56, 46, 21, 28, 32,
-        14, 26, 24, 40, 53, 37, 42, 7,
-        62, 55, 45, 31, 13, 39, 36, 6,
-        61, 44, 12, 35, 60, 11, 10, 9,
-    };
+    IEnumerator<Coord> IEnumerable<Coord>.GetEnumerator() => GetEnumerator();
 
-    public IEnumerator<Coord> GetEnumerator()
-    {
-        var bb = _state;
-        while (bb != 0)
-        {
-            var ordinal = MultiplyDeBruijnBitPosition[((ulong)((long)bb & -(long)bb) * DeBruijnSequence) >> 58];
-            var coord = Coord.FromOrdinal(ordinal);
-            yield return coord;
-            bb &= ~(1ul << ordinal);
-        }
-    }
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-    IEnumerator IEnumerable.GetEnumerator()
-    {
-        return GetEnumerator();
-    }
-
-    public int Count
-    {
-        get
-        {
-            var i = (long)_state;
-            i -= (i >> 1) & 0x5555555555555555;
-            i = (i & 0x3333333333333333) + ((i >> 2) & 0x3333333333333333);
-            return (int)((((i + (i >> 4)) & 0xF0F0F0F0F0F0F0F) * 0x101010101010101) >> 56);
-        }
-    }
+    public int Count => BitOperations.PopCount(_state);
 
     public bool Any => _state != 0;
 
@@ -105,15 +72,12 @@ public struct BitBoard : IEnumerable<Coord>, IEquatable<BitBoard>
     {
         get
         {
-            var bb = _state;
-            var ordinal = MultiplyDeBruijnBitPosition[((ulong)((long)bb & -(long)bb) * DeBruijnSequence) >> 58];
-            var coord = Coord.FromOrdinal(ordinal);
-            if ((_state & ~(1ul << ordinal)) != 0)
+            if (!BitOperations.IsPow2(_state))
             {
                 throw new InvalidOperationException();
             }
 
-            return coord;
+            return Coord.FromOrdinal(BitOperations.TrailingZeroCount(_state));
         }
     }
 
@@ -177,5 +141,41 @@ public struct BitBoard : IEnumerable<Coord>, IEquatable<BitBoard>
             Side.Black => Mask.AheadOfBlackRank[rank],
             _ => throw new ArgumentOutOfRangeException()
         };
+    }
+
+    public struct Enumerator : IEnumerator<Coord>
+    {
+        private readonly ulong _value;
+        private ulong _mValue;
+        private int _current;
+
+        public Enumerator(ulong value)
+        {
+            _value = value;
+            _mValue = value;
+            _current = 0;
+        }
+
+        public bool MoveNext()
+        {
+            if (_mValue == 0) return false;
+            _current = BitOperations.TrailingZeroCount(_mValue);
+            _mValue &= ~(1ul << _current);
+            return true;
+        }
+
+        public void Reset()
+        {
+            _mValue = _value;
+            _current = 0;
+        }
+
+        public Coord Current => Coord.FromOrdinal(_current);
+
+        object IEnumerator.Current => Current;
+
+        public void Dispose()
+        {
+        }
     }
 }
