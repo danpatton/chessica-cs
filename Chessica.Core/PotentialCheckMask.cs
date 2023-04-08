@@ -1,11 +1,13 @@
 ﻿namespace Chessica.Core;
 
-public class PotentialCheckMask
+public struct PotentialCheckMask
 {
     public BitBoard PawnMask;
     public BitBoard BishopMask;
     public BitBoard KnightMask;
     public BitBoard RookMask;
+    public BitBoard DiagonalXrayMask;
+    public BitBoard OrthogonalXrayMask;
     public BitBoard QueenMask => BishopMask | RookMask;
 
     public BitBoard From(Piece pieceType)

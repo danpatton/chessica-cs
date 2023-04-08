@@ -32,6 +32,14 @@ public struct BitBoard : IEnumerable<Coord>, IEquatable<BitBoard>
         return !left.Equals(right);
     }
 
+    public int MagicHashIndex(ulong magic, int indexShift)
+    {
+        unchecked
+        {
+            return (int)((_state * magic) >> indexShift);
+        }
+    }
+
     public bool IsOccupied(Coord coord)
     {
         var bit = 1ul << coord.Ordinal;
@@ -176,6 +184,19 @@ public struct BitBoard : IEnumerable<Coord>, IEquatable<BitBoard>
 
         public void Dispose()
         {
+        }
+    }
+
+    public IEnumerable<BitBoard> SubSets()
+    {
+        var subset = 0ul;
+        unchecked
+        {
+            do
+            {
+                yield return new BitBoard { _state = subset };
+                subset = (subset - _state) & _state;
+            } while (subset != 0);
         }
     }
 }

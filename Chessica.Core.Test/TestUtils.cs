@@ -26,7 +26,7 @@ public class TestUtils
         }
 
         using var reader = new StreamReader(stream);
-        return reader.ReadToEnd();
+        return reader.ReadToEnd().Replace("\r", "");
     }
 
     public static void SimulatePgnGame(PgnGame pgn, string[] expectedFenSequence, PgnGameResult expectedResult)

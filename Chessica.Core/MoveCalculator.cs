@@ -2,6 +2,8 @@
 
 public static class MoveCalculator
 {
+    private static readonly SliderMoveCalculator SliderMoveCalculator = new(12, new Random(0));
+
     private record MoveConstraints(
         BitBoard AttackedSquares,
         BitBoard CheckingPieces,
@@ -13,10 +15,12 @@ public static class MoveCalculator
     {
         var moveConstraints = CalculateConstraints(ownSide, enemySide);
         var potentialChecks = CalculatePotentialChecks(enemySide, ownSide);
+
         var enemyPieces = enemySide.AllPieces;
         var ownPieces = ownSide.AllPieces;
         var allPieces = ownPieces | enemyPieces;
         var pins = moveConstraints.DiagonalPins | moveConstraints.OrthogonalPins;
+        var xrays = potentialChecks.DiagonalXrayMask | potentialChecks.OrthogonalXrayMask;
 
         var ownKing = ownSide.PiecesOfType(Piece.King).Single;
         inCheck = moveConstraints.CheckingPieces.Any;
@@ -59,39 +63,63 @@ public static class MoveCalculator
             }
         }
 
-        foreach (var sliderPiece in new[] { Piece.Queen, Piece.Rook, Piece.Bishop })
+        BitBoard checkEvasionMask = inCheck
+            ? moveConstraints.CheckingPieces | moveConstraints.CheckBlockingSquares
+            : ulong.MaxValue;
+
+        var bishopChecks = potentialChecks.From(Piece.Bishop);
+        foreach (var ownBishopOrQueen in ownSide.Bishops | ownSide.Queens)
         {
-            var checks = potentialChecks.From(sliderPiece);
-            foreach (var ownPiece in ownSide.PiecesOfType(sliderPiece))
+            var allowedMoves = SliderMoveCalculator.GetBishopMoves(ownBishopOrQueen, allPieces, ownPieces) & checkEvasionMask;
+            if (moveConstraints.DiagonalPins.IsOccupied(ownBishopOrQueen))
             {
-                BitBoard allowedMoves = ulong.MaxValue;
-                if (moveConstraints.DiagonalPins.IsOccupied(ownPiece))
-                {
-                    allowedMoves = BitBoard.BishopsMoveMask(ownPiece) & moveConstraints.DiagonalPins;
-                }
-                else if (moveConstraints.OrthogonalPins.IsOccupied(ownPiece))
-                {
-                    allowedMoves = BitBoard.RooksMoveMask(ownPiece) & moveConstraints.OrthogonalPins;
-                }
+                allowedMoves &= moveConstraints.DiagonalPins;
+            }
+            else if (moveConstraints.OrthogonalPins.IsOccupied(ownBishopOrQueen))
+            {
+                allowedMoves &= moveConstraints.OrthogonalPins;
+            }
 
-                foreach (var moveSequence in ownPiece.MoveSequences(sliderPiece, ownSide.Side))
+            var piece = ownSide.Bishops.IsOccupied(ownBishopOrQueen) ? Piece.Bishop : Piece.Queen;
+            var isXray = potentialChecks.DiagonalXrayMask.IsOccupied(ownBishopOrQueen);
+            foreach (var coord in allowedMoves)
+            {
+                var isCheck = bishopChecks.IsOccupied(coord);
+                if (!isCheck && isXray)
                 {
-                    foreach (var coord in moveSequence)
-                    {
-                        if (!allowedMoves.IsOccupied(coord)) continue;
-                        if (ownPieces.IsOccupied(coord)) break;
-                        if (inCheck && !moveConstraints.CheckingPieces.IsOccupied(coord) &&
-                            !moveConstraints.CheckBlockingSquares.IsOccupied(coord))
-                        {
-                            if (enemyPieces.IsOccupied(coord)) break;
-                            continue;
-                        }
-
-                        moves.Add(new Move(sliderPiece, ownPiece, coord, enemyPieces.IsOccupied(coord),
-                            checks.IsOccupied(coord)));
-                        if (enemyPieces.IsOccupied(coord)) break;
-                    }
+                    var discoveredCheckMask = BitBoard.BishopsMoveMask(ownBishopOrQueen) & potentialChecks.DiagonalXrayMask;
+                    isCheck = !discoveredCheckMask.IsOccupied(coord);
                 }
+                moves.Add(new Move(piece, ownBishopOrQueen, coord, enemyPieces.IsOccupied(coord),
+                    isCheck));
+            }
+        }
+
+        var rookChecks = potentialChecks.From(Piece.Rook);
+        foreach (var ownRookOrQueen in ownSide.Rooks | ownSide.Queens)
+        {
+            var allowedMoves = SliderMoveCalculator.GetRookMoves(ownRookOrQueen, allPieces, ownPieces) & checkEvasionMask;
+            if (moveConstraints.DiagonalPins.IsOccupied(ownRookOrQueen))
+            {
+                allowedMoves &= moveConstraints.DiagonalPins;
+            }
+            else if (moveConstraints.OrthogonalPins.IsOccupied(ownRookOrQueen))
+            {
+                allowedMoves &= moveConstraints.OrthogonalPins;
+            }
+
+            var piece = ownSide.Rooks.IsOccupied(ownRookOrQueen) ? Piece.Rook : Piece.Queen;
+            var isXray = potentialChecks.OrthogonalXrayMask.IsOccupied(ownRookOrQueen);
+            foreach (var coord in allowedMoves)
+            {
+                var isCheck = rookChecks.IsOccupied(coord);
+                if (!isCheck && isXray)
+                {
+                    var discoveredCheckMask = BitBoard.RooksMoveMask(ownRookOrQueen) & potentialChecks.OrthogonalXrayMask;
+                    isCheck = !discoveredCheckMask.IsOccupied(coord);
+                }
+                moves.Add(new Move(piece, ownRookOrQueen, coord, enemyPieces.IsOccupied(coord),
+                    isCheck));
             }
         }
 
@@ -104,14 +132,14 @@ public static class MoveCalculator
             }
 
             var checks = potentialChecks.From(Piece.Knight);
-            var knightMoves = ownKnight.KnightMovesMask();
+            var knightMoves = ownKnight.KnightMovesMask() & checkEvasionMask;
             foreach (var coord in knightMoves)
             {
                 if (ownPieces.IsOccupied(coord)) continue;
                 if (inCheck && !moveConstraints.CheckingPieces.IsOccupied(coord) &&
                     !moveConstraints.CheckBlockingSquares.IsOccupied(coord)) continue;
                 moves.Add(new Move(Piece.Knight, ownKnight, coord, enemyPieces.IsOccupied(coord),
-                    checks.IsOccupied(coord)));
+                    checks.IsOccupied(coord) || xrays.IsOccupied(coord)));
             }
         }
 
@@ -291,37 +319,44 @@ public static class MoveCalculator
 
     private static MoveConstraints CalculateConstraints(SideState ownSide, SideState enemySide)
     {
-        BitBoard attackedSquares = 0ul;
-        BitBoard checkingPieces = 0ul;
-        BitBoard checkBlockingSquares = 0ul;
         var ownKing = ownSide.King.Single;
-        var anyPiecesExceptOwnKing = (ownSide.AllPieces | enemySide.AllPieces) & ~ownSide.King;
-        foreach (var pieceType in Enum.GetValues(typeof(Piece)).Cast<Piece>())
-        {
-            foreach (var enemyPiece in enemySide.PiecesOfType(pieceType))
-            {
-                foreach (var moveSequence in enemyPiece.MoveSequences(pieceType, enemySide.Side, attacksOnly: true))
-                {
-                    BitBoard attackPath = 0ul;
-                    foreach (var coord in moveSequence)
-                    {
-                        if (ownKing == coord)
-                        {
-                            // we are in check!
-                            checkingPieces |= enemyPiece;
-                            checkBlockingSquares |= attackPath;
-                            // note we don't break here -- need to keep going "through" the king
-                        }
-                        attackPath |= coord;
-                        if (anyPiecesExceptOwnKing.IsOccupied(coord))
-                        {
-                            break;
-                        }
-                    }
+        var allPieces = ownSide.AllPieces | enemySide.AllPieces;
+        var allPiecesExceptOwnKing = allPieces & ~ownSide.King;
 
-                    attackedSquares |= attackPath;
-                }
+        var checkingPieces = (ownSide.King.PawnCaptureMask(ownSide.Side) & enemySide.Pawns) |
+                             (ownKing.KnightMovesMask() & enemySide.Knights);
+        var attackedSquares = enemySide.Pawns.PawnCaptureMask(enemySide.Side) |
+                              BitBoard.KingsMoveMask(enemySide.King.Single);
+
+        foreach (var enemyKnight in enemySide.Knights)
+        {
+            attackedSquares |= enemyKnight.KnightMovesMask();
+        }
+
+        BitBoard checkBlockingSquares = 0ul;
+
+        foreach (var enemyBishopOrQueen in enemySide.Bishops | enemySide.Queens)
+        {
+            var bishopAttacks = SliderMoveCalculator.GetBishopMoves(enemyBishopOrQueen, allPiecesExceptOwnKing, 0ul);
+            if (bishopAttacks.IsOccupied(ownKing))
+            {
+                checkingPieces |= enemyBishopOrQueen;
+                var attackPath = bishopAttacks & BitBoard.BoundingBoxMask(enemyBishopOrQueen, ownKing) & ~ownSide.King;
+                checkBlockingSquares |= attackPath;
             }
+            attackedSquares |= bishopAttacks;
+        }
+
+        foreach (var enemyRookOrQueen in enemySide.Rooks | enemySide.Queens)
+        {
+            var rookAttacks = SliderMoveCalculator.GetRookMoves(enemyRookOrQueen, allPiecesExceptOwnKing, 0ul);
+            if (rookAttacks.IsOccupied(ownKing))
+            {
+                checkingPieces |= enemyRookOrQueen;
+                var attackPath = rookAttacks & BitBoard.BoundingBoxMask(enemyRookOrQueen, ownKing) & ~ownSide.King;
+                checkBlockingSquares |= attackPath;
+            }
+            attackedSquares |= rookAttacks;
         }
 
         var diagonalPins = GetDiagonalPins(ownSide, enemySide);
@@ -368,47 +403,59 @@ public static class MoveCalculator
         return pinMask;
     }
 
+    private static BitBoard GetDiagonalXrays(SideState ownSide, SideState enemySide)
+    {
+        var enemyKing = enemySide.King.Single;
+        var mask = BitBoard.BishopsMoveMask(enemyKing);
+        var xrayers = (ownSide.Bishops | ownSide.Queens) & mask;
+        BitBoard xrayMask = 0ul;
+        foreach (var xrayer in xrayers)
+        {
+            var xrayPath = mask & BitBoard.BoundingBoxMask(xrayer, enemyKing) & ~ownSide.King;
+            var ownPiecesOnPath = ownSide.AllPieces & xrayPath;
+            var enemyPiecesOnPath = enemySide.AllPieces & xrayPath;
+            if (ownPiecesOnPath.Count == 2 && enemyPiecesOnPath.Count == 0)
+            {
+                xrayMask |= xrayPath;
+            }
+        }
+        return xrayMask;
+    }
+
+    private static BitBoard GetOrthogonalXrays(SideState ownSide, SideState enemySide)
+    {
+        var enemyKing = enemySide.King.Single;
+        var mask = BitBoard.RooksMoveMask(enemyKing);
+        var xrayers = (ownSide.Rooks | ownSide.Queens) & mask;
+        BitBoard xrayMask = 0ul;
+        foreach (var xrayer in xrayers)
+        {
+            var xrayPath = mask & BitBoard.BoundingBoxMask(xrayer, enemyKing) & ~ownSide.King;
+            var ownPiecesOnPath = ownSide.AllPieces & xrayPath;
+            var enemyPiecesOnPath = enemySide.AllPieces & xrayPath;
+            if (ownPiecesOnPath.Count == 2 && enemyPiecesOnPath.Count == 0)
+            {
+                xrayMask |= xrayPath;
+            }
+        }
+        return xrayMask;
+    }
+
     public static PotentialCheckMask CalculatePotentialChecks(SideState kingSide, SideState attackingSide)
     {
         var king = kingSide.King.Single;
         var kingSidePieces = kingSide.AllPieces;
         var attackingPieces = attackingSide.AllPieces;
-
-        BitBoard pawnMask = 0;
-        BitBoard bishopMask = 0;
-        BitBoard rookMask = 0;
-        var knightMask = king.KnightMovesMask();
-
-        var pawnAttackingRank = kingSide.Side == Side.White ? king.Rank + 1 : king.Rank - 1;
-        if (king.File > 0) pawnMask |= new Coord(king.File - 1, pawnAttackingRank);
-        if (king.File < 7) pawnMask |= new Coord(king.File + 1, pawnAttackingRank);
-
-        foreach (var moveSequence in king.MoveSequences(Piece.Bishop, kingSide.Side))
-        {
-            foreach (var coord in moveSequence)
-            {
-                if (attackingPieces.IsOccupied(coord)) break;
-                bishopMask |= coord;
-                if (kingSidePieces.IsOccupied(coord)) break;
-            }
-        }
-
-        foreach (var moveSequence in king.MoveSequences(Piece.Rook, kingSide.Side))
-        {
-            foreach (var coord in moveSequence)
-            {
-                if (attackingPieces.IsOccupied(coord)) break;
-                rookMask |= coord;
-                if (kingSidePieces.IsOccupied(coord)) break;
-            }
-        }
+        var allPieces = kingSidePieces | attackingPieces;
 
         return new PotentialCheckMask
         {
-            PawnMask = pawnMask,
-            BishopMask = bishopMask,
-            KnightMask = knightMask,
-            RookMask = rookMask
+            PawnMask = kingSide.King.PawnCaptureMask(kingSide.Side),
+            BishopMask = SliderMoveCalculator.GetBishopMoves(king, allPieces, attackingPieces),
+            KnightMask = king.KnightMovesMask(),
+            RookMask = SliderMoveCalculator.GetRookMoves(king, allPieces, attackingPieces),
+            DiagonalXrayMask = GetDiagonalXrays(attackingSide, kingSide),
+            OrthogonalXrayMask = GetOrthogonalXrays(attackingSide, kingSide)
         };
     }
 }
