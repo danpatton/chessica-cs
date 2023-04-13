@@ -77,7 +77,7 @@ public static class MoveCalculator
             }
             else if (moveConstraints.OrthogonalPins.IsOccupied(ownBishopOrQueen))
             {
-                allowedMoves &= moveConstraints.OrthogonalPins;
+                allowedMoves &= moveConstraints.OrthogonalPins & BitBoard.RooksMoveMask(ownBishopOrQueen);
             }
 
             var piece = ownSide.Bishops.IsOccupied(ownBishopOrQueen) ? Piece.Bishop : Piece.Queen;
@@ -101,7 +101,7 @@ public static class MoveCalculator
             var allowedMoves = SliderMoveCalculator.GetRookMoves(ownRookOrQueen, allPieces, ownPieces) & checkEvasionMask;
             if (moveConstraints.DiagonalPins.IsOccupied(ownRookOrQueen))
             {
-                allowedMoves &= moveConstraints.DiagonalPins;
+                allowedMoves &= moveConstraints.DiagonalPins & BitBoard.BishopsMoveMask(ownRookOrQueen);
             }
             else if (moveConstraints.OrthogonalPins.IsOccupied(ownRookOrQueen))
             {
@@ -268,7 +268,10 @@ public static class MoveCalculator
         enemySide.EnPassantSquare.MatchSome(ep =>
         {
             BitBoard bbEp = ep;
-            var potentialCapturers = unpinnedPawns & bbEp.PawnCaptureMask(enemySide.Side);
+            var candidatePawns = moveConstraints.DiagonalPins.IsOccupied(ep)
+                ? unpinnedPawns | diagonallyPinnedPawns
+                : unpinnedPawns;
+            var potentialCapturers = candidatePawns & bbEp.PawnCaptureMask(enemySide.Side);
             var capturersOnKingsRank = potentialCapturers & BitBoard.RankMask(ownKing.Rank);
             var canCaptureEp = true;
             if (capturersOnKingsRank.Count == 1)
@@ -306,7 +309,7 @@ public static class MoveCalculator
                 if (epBb.PawnPushMask(enemySide.Side) == moveConstraints.CheckingPieces)
                 {
                     // ep capture gets us out of check
-                    checkDodgers = epBb;
+                    checkDodgers |= epBb;
                 }
             });
             pawnMoves.RemoveAll(m => !checkDodgers.IsOccupied(m.To));

@@ -9,6 +9,8 @@ public class BenchmarkingTests
     private const string Position4 = "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1";
     private const string Position5 = "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8";
     private const string Position6 = "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10";
+    private const string Position7 = "rn1qk1nr/pbppp1bp/1p4p1/4Pp2/3K4/8/PPPP1PPP/RNBQ1BNR w kq f6 0 1";
+    private const string Position8 = "rnb1k1nr/pppp1ppp/8/4p3/1b1P3q/2Q5/PPP1PPPP/RNB1KBNR w KQkq - 0 4";
 
     [TestCase(Position1, 1, 20ul)]
     [TestCase(Position1, 2, 400ul)]
@@ -35,6 +37,14 @@ public class BenchmarkingTests
     [TestCase(Position6, 2, 2_079ul)]
     [TestCase(Position6, 3, 89_890ul)]
     [TestCase(Position6, 4, 3_894_594ul)]
+    [TestCase(Position7, 1, 33ul)]
+    [TestCase(Position7, 2, 983ul)]
+    [TestCase(Position7, 3, 28_964ul)]
+    [TestCase(Position7, 4, 844_341ul)]
+    [TestCase(Position8, 1, 23ul)]
+    [TestCase(Position8, 2, 1_009ul)]
+    [TestCase(Position8, 3, 26_125ul)]
+    [TestCase(Position8, 4, 1_072_898ul)]
     public void TestPerft(string initialFen, int depth, ulong expectedResult)
     {
         var board = BoardState.ParseFen(initialFen);

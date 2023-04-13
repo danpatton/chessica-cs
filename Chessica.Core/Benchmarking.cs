@@ -17,4 +17,21 @@ public static class Benchmarking
 
         return count;
     }
+
+    public static ulong PerftSplit(BoardState board, int depth)
+    {
+        var moves = board.GetLegalMoves().ToList();
+        var count = 0ul;
+        foreach (var move in moves)
+        {
+            using (board.Push(move))
+            {
+                var p = Perft(board, depth - 1);
+                count += p;
+                Console.WriteLine($"{move.ToUciString()} moves = {p}");
+            }
+        }
+
+        return count;
+    }
 }
