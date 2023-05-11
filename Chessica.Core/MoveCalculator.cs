@@ -2,7 +2,7 @@
 
 public static class MoveCalculator
 {
-    private static readonly SliderMoveCalculator SliderMoveCalculator = new(12, new Random(0));
+    private static readonly SliderMoveCalculator SliderMoveCalculator = SliderMoveCalculator.Hardcoded();
 
     private record MoveConstraints(
         BitBoard AttackedSquares,
