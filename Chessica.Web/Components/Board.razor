@@ -7,13 +7,16 @@
 
 <div class="panel-wrapper">
     <div class="menu-bar-panel">
-        <button class="menu-button" onclick="@NewGame_White_OnClick">New Game (White)</button>
+        <RadzenButton Click="@NewGame_White_OnClick">New Game (White)</RadzenButton>
     </div>
     <div class="menu-bar-panel">
-        <button class="menu-button" onclick="@NewGame_Black_OnClick">New Game (Black)</button>
+        <RadzenButton Click="@NewGame_Black_OnClick">New Game (Black)</RadzenButton>
     </div>
     <div class="menu-bar-panel">
-        <button class="menu-button @(CanUndo ? "" : "menu-button-disabled")" onclick="@Undo_OnClick">Undo Last Full Move</button>
+        <RadzenButton Disabled="@CannotUndo" Click="@Undo_OnClick">Undo Last Full Move</RadzenButton>
+    </div>
+    <div class="menu-bar-panel">
+        <RadzenDropDown TValue="string" @bind-Value="@SelectedEngine" Data="@Engines" />
     </div>
     <div class="board-panel">
         <div class="board">
@@ -45,6 +48,15 @@
 
 @code {
 
+    IEnumerable<string> Engines => new[]
+    {
+        "Random",
+        "Chessica 0.1",
+        "Chessica 0.2"
+    };
+
+    string SelectedEngine { get; set; } = "Chessica 0.2";
+
     [CascadingParameter]
     public IModalService Modal { get; set; } = default!;
 
@@ -69,6 +81,8 @@
     }
 
     public bool CanUndo = false;
+
+    public bool CannotUndo => !CanUndo;
 
     public string StatusMessage { get; set; } = string.Empty;
 
@@ -140,6 +154,21 @@
         }
     }
 
+    private IMoveGenerator GetMoveGenerator()
+    {
+        switch (SelectedEngine)
+        {
+            case "Random":
+                return new DeterministicRandomMoveGenerator();
+            case "Chessica 0.1":
+                return new MiniMaxMoveGenerator(4);
+            case "Chessica 0.2":
+                return new ChessicaRustApiMoveGenerator(7, 20);
+            default:
+                throw new Exception("Unknown engine: " + SelectedEngine);
+        }
+    }
+
     public async Task MakeEngineMove()
     {
         if (IsUsersMove) return;
@@ -155,8 +184,9 @@
             return;
         }
         CanUndo = false;
+        var moveGenerator = GetMoveGenerator();
         StatusMessage = "Thinking...";
-        var engineMove = await Task.Run(() => new MiniMaxMoveGenerator(4).GetBestMove(_boardState));
+        var engineMove = await Task.Run(() => moveGenerator.GetBestMove(_boardState));
         var pgnSpec = engineMove.ToPgnSpec(_boardState);
         _boardState.Push(engineMove);
         (inCheck, numLegalMoves) = _boardState.GetGameState();

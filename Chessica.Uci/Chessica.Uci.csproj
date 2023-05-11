@@ -8,6 +8,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Chessica.Core\Chessica.Core.csproj" />
+      <ProjectReference Include="..\Chessica.Rust\Chessica.Rust.csproj" />
       <ProjectReference Include="..\Chessica.Search\Chessica.Search.csproj" />
     </ItemGroup>
 
