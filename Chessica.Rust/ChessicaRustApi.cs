@@ -5,7 +5,7 @@ namespace Chessica.Rust;
 
 public class ChessicaRustApi
 {
-    [DllImport("libchessica_api", EntryPoint = "get_best_move")]
+    [DllImport("chessica_api", EntryPoint = "get_best_move")]
     private static extern int GetBestMove(uint maxDepth, uint ttKeyBits, byte[] fenBuf, UIntPtr fenLen, byte[] bestMoveBuf, UIntPtr bestMoveLen);
 
     public static bool TryGetBestMove(uint maxDepth, uint ttKeyBits, string inputFen, out string? bestMove)
