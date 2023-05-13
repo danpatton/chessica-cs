@@ -15,10 +15,10 @@
     <div class="menu-bar-panel">
         <RadzenButton Disabled="@CannotUndo" Click="@Undo_OnClick">Undo Last Full Move</RadzenButton>
     </div>
-    <div class="menu-bar-panel">
-        <RadzenDropDown TValue="string" @bind-Value="@SelectedEngine" Data="@Engines" />
-    </div>
     <div class="board-panel">
+        @* <div> *@
+        @*     <RadzenDropDown TValue="string" @bind-Value="@SelectedEngine" Data="@Engines" /> *@
+        @* </div> *@
         <div class="board">
             @foreach (var coord in AllCoords)
             {
@@ -69,6 +69,7 @@
     List<Move> _legalMoves = new();
     Stack<PgnMove> _pgnMoves = new();
     private PgnGameResult _pgnResult = PgnGameResult.Other;
+    private bool _hasUndoneAnyMoves = false;
 
     public async Task NewGame_White_OnClick()
     {
@@ -98,6 +99,7 @@
             _pgnMoves.Pop();
         }
         CanUndo = _pgnMoves.Count > (UserSide == Side.White ? 1 : 2);
+        _hasUndoneAnyMoves = true;
         _pgnResult = PgnGameResult.Other;
         _legalMoves = _boardState.GetLegalMoves().ToList();
         if (_pgnMoves.Any())
@@ -119,6 +121,7 @@
         _legalMoves = _boardState.GetLegalMoves().ToList();
         _pgnMoves = new Stack<PgnMove>();
         _pgnResult = PgnGameResult.Other;
+        _hasUndoneAnyMoves = false;
         StatusMessage = string.Empty;
         if (!IsUsersMove)
         {
@@ -149,8 +152,12 @@
         else
         {
             StatusMessage = isCheckmate
-                ? "Bloody hell mate, looks like you've got me!"
-                : "Managed to snatch a draw off you!";
+                ? _hasUndoneAnyMoves
+                    ? "Crikey, you've managed to get the better of Chessica... this time!"
+                    : "Wowsers, few mortals can say they've got the better of Chessica, what's your rating!?"
+                : _hasUndoneAnyMoves
+                    ? "Crikey, you nearly had me there!"
+                    : "Wowsers, you nearly had me there!";
         }
     }
 
