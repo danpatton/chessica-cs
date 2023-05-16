@@ -10,19 +10,28 @@ pool:
   vmImage: ubuntu-latest
 
 variables:
-  buildConfiguration: 'Release'
+  BuildConfiguration: 'Release'
 
 steps:
-- task: NuGetCommand@2
-  displayName: Nuget restore
+- task: DotNetCoreCLI@2
+  displayName: Dotnet restore
   inputs:
     command: 'restore'
-    restoreSolution: '**/*.sln'
+    projects: '**/*.sln'
     feedsToUse: 'select'
     vstsFeed: 'chessica/private-nuget'
-- script: dotnet build --configuration $(buildConfiguration)
-  displayName: 'dotnet build $(buildConfiguration)'
+- task: DotNetCoreCLI@2
+  displayName: Dotnet build
+  inputs:
+    command: 'build'
+    projects: '**/*.sln'
+- task: DotNetCoreCLI@2
+  displayName: Dotnet publish
+  inputs:
+    command: 'publish'
+    publishWebProjects: true
 - task: AzureWebApp@1
+  displayName: Deploy webapp
   inputs:
     azureSubscription: 'Azure subscription 1(ae7082e1-108c-44c0-924b-975ca0362834)'
     appType: 'webAppLinux'
