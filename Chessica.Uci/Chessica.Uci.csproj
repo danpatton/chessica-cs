@@ -8,11 +8,11 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Chessica.Core\Chessica.Core.csproj" />
-      <ProjectReference Include="..\Chessica.Rust\Chessica.Rust.csproj" />
       <ProjectReference Include="..\Chessica.Search\Chessica.Search.csproj" />
     </ItemGroup>
 
     <ItemGroup>
+      <PackageReference Include="ChessicaRustApi" Version="0.1.0-alpha" />
       <PackageReference Include="Serilog" Version="3.0.0-dev-01862" />
     </ItemGroup>
 

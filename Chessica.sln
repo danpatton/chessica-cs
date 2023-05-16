@@ -20,10 +20,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Chessica.Web", "Chessica.We
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Chessica.Uci.Test", "Chessica.Uci.Test\Chessica.Uci.Test.csproj", "{0FB91F16-D2E3-40DD-A850-1C8B18AEB222}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Chessica.Rust", "Chessica.Rust\Chessica.Rust.csproj", "{57FB17B3-C600-403F-BF7A-BAB581588379}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Chessica.Rust.Test", "Chessica.Rust.Test\Chessica.Rust.Test.csproj", "{0F117CF5-A26F-4D8C-B6EE-6EAB6F805B30}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -70,13 +66,5 @@ Global
 		{0FB91F16-D2E3-40DD-A850-1C8B18AEB222}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0FB91F16-D2E3-40DD-A850-1C8B18AEB222}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0FB91F16-D2E3-40DD-A850-1C8B18AEB222}.Release|Any CPU.Build.0 = Release|Any CPU
-		{57FB17B3-C600-403F-BF7A-BAB581588379}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{57FB17B3-C600-403F-BF7A-BAB581588379}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{57FB17B3-C600-403F-BF7A-BAB581588379}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{57FB17B3-C600-403F-BF7A-BAB581588379}.Release|Any CPU.Build.0 = Release|Any CPU
-		{0F117CF5-A26F-4D8C-B6EE-6EAB6F805B30}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{0F117CF5-A26F-4D8C-B6EE-6EAB6F805B30}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0F117CF5-A26F-4D8C-B6EE-6EAB6F805B30}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{0F117CF5-A26F-4D8C-B6EE-6EAB6F805B30}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
