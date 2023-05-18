@@ -27,7 +27,7 @@ public class ChessicaRustApiMoveGenerator : IMoveGenerator
 
         var initialFen = BoardState.StartingPosition.ToFenString();
         var moveHistory = boardState.UciMoveHistory.ToList();
-        if (ChessicaRustApi.TryGetBestMove(_maxDepth, _ttKeyBits, initialFen, moveHistory, out var uciMove) && uciMove != null)
+        if (ChessicaRustApi.TryGetBestMove(initialFen, moveHistory, _maxDepth, _ttKeyBits, out var uciMove) && uciMove != null)
         {
             return uciMoves.TryGetValue(uciMove, out bestMove);
         }
