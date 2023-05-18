@@ -38,6 +38,8 @@ public class BoardState
         return new BoardState(WhiteState.Clone(), BlackState.Clone(), SideToMove, HalfMoveClock, FullMoveNumber, _hashHistory.Clone());
     }
 
+    public IEnumerable<string> UciMoveHistory => _moveStack.Reverse().Select(t => t.Item1.ToUciString());
+
     private readonly Regex _castlingMoveRegex = new("([Oo0](-[Oo0]){1,2})([+#]?)");
     private readonly Regex _promotionMoveRegex = new("([a-h])?(x)?([a-h][1-8])\\=([QRBN])([+#]?)");
     private readonly Regex _standardMoveRegex = new ("([KQRBN])?([a-h])?([1-8])?(x)?([a-h][1-8])([+#]?)");
