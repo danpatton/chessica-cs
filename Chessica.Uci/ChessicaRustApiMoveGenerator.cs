@@ -7,11 +7,13 @@ public class ChessicaRustApiMoveGenerator : IMoveGenerator
 {
     private readonly uint _maxDepth;
     private readonly uint _ttKeyBits;
+    private readonly ulong _rngSeed;
 
-    public ChessicaRustApiMoveGenerator(uint maxDepth, uint ttKeyBits)
+    public ChessicaRustApiMoveGenerator(uint maxDepth, uint ttKeyBits, ulong? rngSeed = null)
     {
         _maxDepth = maxDepth;
         _ttKeyBits = ttKeyBits;
+        _rngSeed = rngSeed ?? 0ul;
     }
 
     public bool TryGetBestMove(BoardState boardState, out Move? bestMove)
@@ -27,7 +29,7 @@ public class ChessicaRustApiMoveGenerator : IMoveGenerator
 
         var initialFen = BoardState.StartingPosition.ToFenString();
         var moveHistory = boardState.UciMoveHistory.ToList();
-        if (ChessicaRustApi.TryGetBestMove(initialFen, moveHistory, _maxDepth, _ttKeyBits, out var uciMove) && uciMove != null)
+        if (ChessicaRustApi.TryGetBestMove(initialFen, moveHistory, _maxDepth, _ttKeyBits, _rngSeed, out var uciMove) && uciMove != null)
         {
             return uciMoves.TryGetValue(uciMove, out bestMove);
         }

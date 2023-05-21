@@ -47,6 +47,8 @@
 </div>
 
 @code {
+    [Parameter]
+    public int? RngSeed { get; set; }
 
     IEnumerable<string> Engines => new[]
     {
@@ -170,7 +172,7 @@
             case "Chessica 0.1":
                 return new MiniMaxMoveGenerator(4);
             case "Chessica 0.2":
-                return new ChessicaRustApiMoveGenerator(7, 20);
+                return new ChessicaRustApiMoveGenerator(7, 20, (ulong)RngSeed.GetValueOrDefault(0));
             default:
                 throw new Exception("Unknown engine: " + SelectedEngine);
         }
