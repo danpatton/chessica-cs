@@ -16,7 +16,8 @@ steps:
 - task: UseDotNet@2
   inputs:
     packageType: 'sdk'
-    useGlobalJson: true
+    version: 8.0.x
+    includePreviewVersions: true
 - task: DotNetCoreCLI@2
   displayName: Dotnet restore
   inputs:
